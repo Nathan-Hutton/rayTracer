@@ -1,7 +1,11 @@
+#include "scene.h"
+
 #include <iostream>
+
+int LoadScene( RenderScene &scene, char const *filename );
 
 int main()
 {
-    std::cout << "Hello\n";
-    return 1;
+    RenderScene scene{};
+    LoadScene(scene, "../scene.xml");
 }

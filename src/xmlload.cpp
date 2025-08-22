@@ -177,7 +177,7 @@ void LoadTransform( Transformation *trans, tinyxml2::XMLElement *element, int le
             Vec3f s(0,0,0);
             ReadVector( child, s );
             s.Normalize();
-            float a;
+            float a = 0.0f;
             ReadFloat(child,a,"angle");
             trans->Rotate(s,a);
             PrintIndent(level);
