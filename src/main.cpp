@@ -83,7 +83,6 @@ int main()
             for (int nodeIndex{ 0 }; nodeIndex < scene.rootNode.GetNumChild(); ++nodeIndex)
                 scene.renderImage.GetZBuffer()[j * scene.camera.imgWidth + i] = getClosestCollision(scene.rootNode.GetChild(nodeIndex), worldRay);
         }
-        break;
     }
 
     scene.renderImage.ComputeZBufferImage();
