@@ -112,6 +112,9 @@ public:
 	// Transforms a vector from the local coordinate system (same as multiplication with the inverse transpose of the transformation)
 	Vec3f VectorTransformFrom( Vec3f const &dir ) const { return TransposeMult(itm,dir); }
 
+    Vec3f DirTransformTo( Vec3f const &dir ) const { return itm * dir; }
+    Vec3f DirTransformFrom( Vec3f const &dir ) const { return tm * dir; }
+
 	void Translate( Vec3f const &p ) { pos+=p; }
 	void Rotate   ( Vec3f const &axis, float degrees ) { Matrix3f m; m.SetRotation(axis,degrees*Pi<float>()/180.0f); Transform(m); }
 	void Scale    ( float sx, float sy, float sz )     { Matrix3f m; m.Zero(); m[0]=sx; m[4]=sy; m[8]=sz; Transform(m); }
@@ -186,10 +189,11 @@ public:
 	// Transformations
 	Ray ToNodeCoords( Ray const &ray ) const
 	{
-		Ray r;
-		r.p   = TransformTo(ray.p);
-		r.dir = TransformTo(ray.p + ray.dir) - r.p;
-		return r;
+		Ray transformedRay;
+		transformedRay.p   = TransformTo(ray.p);
+		//transformedRay.dir = TransformTo(ray.p + ray.dir) - transformedRay.p;
+        transformedRay.dir = DirTransformTo(ray.dir);
+		return transformedRay;
 	}
 };
 

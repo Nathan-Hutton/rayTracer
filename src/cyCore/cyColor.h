@@ -226,6 +226,7 @@ public:
 	//!@name Constructors
 	Color24() CY_CLASS_FUNCTION_DEFAULT
 	Color24( Color24 const &c ) : r(c.r), g(c.g), b(c.b) {}
+    Color24& operator=(const Color24&) = default;   // <-- add this
 	explicit Color24( uint8_t _r, uint8_t _g, uint8_t _b ) : r(_r), g(_g), b(_b) {}
 	explicit Color24( Color   const &c ) { r=FloatToByte(c.r); g=FloatToByte(c.g); b=FloatToByte(c.b); }
 	explicit Color24( ColorA  const &c ) { r=FloatToByte(c.r); g=FloatToByte(c.g); b=FloatToByte(c.b); }

@@ -27,4 +27,14 @@ endif()
 # Source files
 file(GLOB SOURCES "src/*.cpp")
 
+# FreeGLUT / OpenGL
+find_package(OpenGL REQUIRED)   # provides OpenGL::GL and (optionally) OpenGL::GLU
+find_package(GLUT REQUIRED)     # freeglut provides GLUT on Arch
+
 add_executable(main ${SOURCES})
+
+target_link_libraries(main PRIVATE
+  OpenGL::GL
+  GLUT::GLUT
+  OpenGL::GLU   # uncomment if you use GLU functions
+)
