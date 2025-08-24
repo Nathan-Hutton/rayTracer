@@ -36,3 +36,9 @@ World space width of camera image plane: aspectRatio*h
 
 If the camera looked down it's target direction and shot rays in that direction, then it would be looking down its positive z axis.
 We want it to look down its negative z axis. We want it to shoot rays along its -z direction. We want the z coord for the ray dir in camera space to always be -1. So we have to negate the z axis when making the camera matrix which takes us from camera space to world space
+
+// Since a Node is a Transformation, you can just combine the Transformation of the parent with the child
+// Spheres don't have a radius value, they have a scale, and it's part of the Node I think
+For each node:
+    if ray collision:
+        

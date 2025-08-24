@@ -1,5 +1,8 @@
 #include "objects.h"
 
+#include <iostream>
+#include <cmath>
+
 /*
 struct HitInfo
 {
@@ -13,8 +16,18 @@ struct HitInfo
 */
 
 // For completeness, have code to handle all hitSide conditions
-bool Sphere::IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide ) const
+bool Sphere::IntersectRay( Ray const &normalizedLocalRay, HitInfo &hInfo, int hitSide ) const
 {
-    // Transform ray from camera space to object space
+    const float t{ -normalizedLocalRay.p.Dot(normalizedLocalRay.dir) };
+    const Vec3f p{ normalizedLocalRay.p + normalizedLocalRay.dir * t };
+
+    if (p.Length() > 1.0f)
+        return false;
+
+    const float x{ sqrtf(1.0f - p.LengthSquared()) };
+    const float t1{ t - x };
+
+    hInfo.z = t1;
+    hInfo.front = true;
     return true;
 }

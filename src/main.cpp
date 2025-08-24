@@ -7,6 +7,37 @@
 
 int LoadScene( RenderScene &scene, char const *filename );
 
+//struct HitInfo
+//{
+//	float       z;		// the distance from the ray center to the hit point
+//	Node const *node;	// the object node that was hit
+//	bool        front;	// true if the ray hits the front side, false if the ray hits the back side
+//
+//	HitInfo() { Init(); }
+//	void Init() { z=BIGFLOAT; node=nullptr; front=true; }
+//};
+
+float getClosestCollision(const Node* const node, const Ray& ray)
+{
+    HitInfo hitInfo{};
+    hitInfo.Init();
+    hitInfo.node = node;
+
+    Ray localRay{ node->ToNodeCoords(ray) };
+    localRay.dir.Normalize();
+
+    node->GetNodeObj()->IntersectRay(localRay, hitInfo);
+    float closestDepth{ hitInfo.z };
+
+    for (int i{ 0 }; i < node->GetNumChild(); ++i)
+    {
+        const float closestChildCollisionDepth{ getClosestCollision(node->GetChild(i), localRay) };
+        closestDepth = fmin(closestDepth, closestChildCollisionDepth);
+    }
+
+    return closestDepth;
+}
+
 int main()
 {
     // Shoot out one ray per pixel. For each object (sphere), call IntersectRay
@@ -49,9 +80,14 @@ int main()
             //const Ray ray{ Vec3f{ 0.0f }, rayDir.GetNormalized() };
             const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir).GetNormalized() };
 
-            // Next, traverse tree. Get ray dir and pos in world space
+            for (int nodeIndex{ 0 }; nodeIndex < scene.rootNode.GetNumChild(); ++nodeIndex)
+                scene.renderImage.GetZBuffer()[j * scene.camera.imgWidth + i] = getClosestCollision(scene.rootNode.GetChild(nodeIndex), worldRay);
         }
+        break;
     }
+
+    scene.renderImage.ComputeZBufferImage();
+    scene.renderImage.SaveZImage("../image.png");
 
     return 0;
 }
