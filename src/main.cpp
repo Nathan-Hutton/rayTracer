@@ -23,7 +23,7 @@ int main()
     scene.camera.dir = -(scene.camera.dir).GetNormalized();
     const Vec3f right{ scene.camera.up.Cross(scene.camera.dir).GetNormalized() };
     scene.camera.up = scene.camera.dir.Cross(right).GetNormalized();
-    const Matrix3f cameraMat{ right, scene.camera.up, -scene.camera.dir };
+    const Matrix3f cameraMat{ right, scene.camera.up, scene.camera.dir };
     //Transformation cameraTransform{};
     //cameraTransform.Transform(cameraMat);
     //cameraTransform.Translate(scene.camera.pos);
