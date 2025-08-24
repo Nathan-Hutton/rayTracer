@@ -12,6 +12,7 @@ struct HitInfo
 };
 */
 
+// For completeness, have code to handle all hitSide conditions
 bool Sphere::IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide ) const
 {
     // Transform ray from camera space to object space
