@@ -326,7 +326,7 @@ void GlutIdle()
  
 //-------------------------------------------------------------------------------
  
-void GlutKeyboard(unsigned char key, int x, int y)
+void GlutKeyboard(unsigned char key, [[maybe_unused]] int x, [[maybe_unused]] int y)
 {
     switch ( key ) {
     case 27:    // ESC
@@ -420,6 +420,8 @@ void GlutMotion(int x, int y)
     switch ( mouseMode ) {
         case MOUSEMODE_DEBUG:
             PrintPixelData(x,y);
+            break;
+        case MOUSEMODE_NONE:
             break;
     }
 }

@@ -5,22 +5,23 @@
 
 bool Sphere::IntersectRay( Ray const &normalizedLocalRay, HitInfo &hInfo, int hitSide ) const
 {
-    const float t{ -normalizedLocalRay.p.Dot(normalizedLocalRay.dir) };
-    const Vec3f p{ normalizedLocalRay.p + normalizedLocalRay.dir * t };
+    const float sphereToRayDist{ -normalizedLocalRay.p.Dot(normalizedLocalRay.dir) };
+    const Vec3f projectCenterToRayDir{ normalizedLocalRay.p + normalizedLocalRay.dir * sphereToRayDist };
 
-    if (p.Length() > 1.0f)
+    if (projectCenterToRayDir.Length() > 1.0f)
         return false;
 
-    const float x{ sqrtf(1.0f - p.LengthSquared()) };
-    const float t1{ t - x };
-    if (t1 < 0.0f)
+    const float x{ sqrtf(1.0f - projectCenterToRayDir.LengthSquared()) };
+    const float hitPoint1{ sphereToRayDist - x };
+    if (hitPoint1 < 0.0f)
         return false;
 
-    const Vec3f surfaceHitSpot{ normalizedLocalRay.p + normalizedLocalRay.dir * t1 };
+    // Maybe this is unnecessary?
+    const Vec3f surfaceHitSpot{ normalizedLocalRay.p + normalizedLocalRay.dir * hitPoint1 };
     if (surfaceHitSpot.GetNormalized().Dot(normalizedLocalRay.dir) > 0.0f)
         return false;
 
-    hInfo.z = t1;
+    hInfo.z = hitPoint1;
     hInfo.front = true;
     return true;
 }

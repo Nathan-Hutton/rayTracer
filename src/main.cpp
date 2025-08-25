@@ -1,11 +1,13 @@
 #include "scene.h"
 #include "cyCore/cyVector.h"
 #include "cyCore/cyMatrix.h"
+//#include "viewport.cpp"
 
 #include <iostream>
 #include <cmath>
 
 int LoadScene( RenderScene &scene, char const *filename );
+void ShowViewport( RenderScene *scene );
 
 bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 {
@@ -20,8 +22,8 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         hitInfo.Init();
         if (obj->IntersectRay(localRay, hitInfo))
         {
-            const Vec3f hitPoint{ localRay.p + localRay.dir.GetNormalized() * hitInfo.z };
-            const Vec3f hitPointInParentSpace{ node->TransformFrom(hitPoint) };
+            const Vec3f localHitPoint{ localRay.p + localRay.dir.GetNormalized() * hitInfo.z };
+            const Vec3f hitPointInParentSpace{ node->TransformFrom(localHitPoint) };
             const float parentSpaceHitPointDepth{ (hitPointInParentSpace - ray.p).Length() };
 
             bestHitInfo.node = node;
@@ -36,8 +38,8 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         childHitInfo.Init();
         if (shootRay(node->GetChild(i), localRay, childHitInfo))
         {
-            const Vec3 hitPoint{ localRay.p + localRay.dir.GetNormalized() * childHitInfo.z };
-            const Vec3f hitPointInParentSpace{ node->TransformFrom(hitPoint) };
+            const Vec3 localHitPoint{ localRay.p + localRay.dir.GetNormalized() * childHitInfo.z };
+            const Vec3f hitPointInParentSpace{ node->TransformFrom(localHitPoint) };
             const float parentSpaceHitPointDepth{ (hitPointInParentSpace - ray.p).Length() };
 
             if (parentSpaceHitPointDepth < bestHitInfo.z)
@@ -57,10 +59,10 @@ int main()
     RenderScene scene{};
     LoadScene(scene, "../scene.xml");
 
-    scene.camera.dir = -(scene.camera.dir).GetNormalized();
-    const Vec3f right{ scene.camera.up.Cross(scene.camera.dir).GetNormalized() };
-    scene.camera.up = scene.camera.dir.Cross(right).GetNormalized();
-    const Matrix3f cameraMat{ right, scene.camera.up, scene.camera.dir };
+    const Vec3 camZ{ -scene.camera.dir.GetNormalized() };
+    const Vec3f camX{ scene.camera.up.Cross(camZ).GetNormalized() };
+    const Vec3f camY{ camZ.Cross(camX) };
+    const Matrix3f cameraMat{ camX, camY, camZ };
 
     constexpr float Pi = 3.14159265358979323846f;
     const float imagePlaneHeight{ 2 * tanf((static_cast<float>(scene.camera.fov) * Pi / 180.0f) / 2.0f) };
@@ -98,5 +100,6 @@ int main()
     scene.renderImage.SaveZImage("../zbuffer.png");
     scene.renderImage.SaveImage("../image.png");
 
+    ShowViewport(&scene);
     return 0;
 }
