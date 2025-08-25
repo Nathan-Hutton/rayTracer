@@ -13,25 +13,32 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& hitInfo)
     Ray localRay{ node->ToNodeCoords(ray) };
     localRay.dir.Normalize();
 
+    bool hitObject{ false };
     if (obj != nullptr)
     {
         if (obj->IntersectRay(localRay, hitInfo))
         {
             hitInfo.node = node;
-            return true;
+            hitObject = true;
         }
     }
 
     for (int i{ 0 }; i < node->GetNumChild(); ++i)
     {
-        if (shootRay(node->GetChild(i), localRay, hitInfo))
+        HitInfo newHitInfo{};
+        newHitInfo.Init();
+        if (shootRay(node->GetChild(i), localRay, newHitInfo))
         {
-            hitInfo.node = node->GetChild(i);
-            return true;
+            if (newHitInfo.z < hitInfo.z)
+            {
+                newHitInfo.node = node->GetChild(i);
+                hitInfo = newHitInfo;
+            }
+            hitObject = true;
         }
     }
 
-    return false;
+    return hitObject;
 }
 
 float getClosestCollision(const Node* const node, const Ray& ray)
@@ -73,6 +80,7 @@ int main()
     const float pixelSize{ imagePlaneWidth / static_cast<float>(scene.camera.imgWidth) };
 
     Color24* pixels{ scene.renderImage.GetPixels() };
+    float* depthValues{ scene.renderImage.GetZBuffer() };
     for (int i{ 0 }; i < scene.camera.imgWidth; ++i)
     {
         for (int j{ 0 }; j < scene.camera.imgHeight; ++j)
@@ -84,7 +92,6 @@ int main()
                 y,
                 -1.0f
             };
-            //const Ray ray{ Vec3f{ 0.0f }, rayDir.GetNormalized() };
             const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir).GetNormalized() };
 
 
@@ -93,6 +100,7 @@ int main()
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
             {
                 pixels[j * scene.camera.imgWidth + i] = Color24{ 255, 255, 255 };
+                depthValues[j * scene.camera.imgWidth + i] = hitInfo.z;
             }
             //float closestDepth{ BIGFLOAT };
             //for (int nodeIndex{ 0 }; nodeIndex < scene.rootNode.GetNumChild(); ++nodeIndex)
@@ -102,8 +110,8 @@ int main()
         }
     }
 
-    //scene.renderImage.ComputeZBufferImage();
-    //scene.renderImage.SaveZImage("../image.png");
+    scene.renderImage.ComputeZBufferImage();
+    scene.renderImage.SaveZImage("../zbuffer.png");
     scene.renderImage.SaveImage("../image.png");
 
     return 0;
