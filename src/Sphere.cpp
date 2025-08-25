@@ -30,7 +30,8 @@ bool Sphere::IntersectRay( Ray const &normalizedLocalRay, HitInfo &hInfo, int hi
         return false;
 
     const Vec3f surfaceHitSpot{ normalizedLocalRay.p + normalizedLocalRay.dir * t1 };
-    if (surfaceHitSpot.GetNormalized().Dot(normalizedLocalRay.dir))
+    if (surfaceHitSpot.GetNormalized().Dot(normalizedLocalRay.dir) > 0.0f)
+        return false;
 
     hInfo.z = t1;
     hInfo.front = true;

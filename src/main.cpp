@@ -7,16 +7,6 @@
 
 int LoadScene( RenderScene &scene, char const *filename );
 
-//struct HitInfo
-//{
-//	float       z;		// the distance from the ray center to the hit point
-//	Node const *node;	// the object node that was hit
-//	bool        front;	// true if the ray hits the front side, false if the ray hits the back side
-//
-//	HitInfo() { Init(); }
-//	void Init() { z=BIGFLOAT; node=nullptr; front=true; }
-//};
-
 float getClosestCollision(const Node* const node, const Ray& ray)
 {
     HitInfo hitInfo{};
@@ -40,24 +30,13 @@ float getClosestCollision(const Node* const node, const Ray& ray)
 
 int main()
 {
-    // Shoot out one ray per pixel. For each object (sphere), call IntersectRay
-    // If no hit, return false.
-    // Else, fill in hitInfo with z, Node*, and front (bool)
-    // Test hitInfo.z againt what's currently in zbuffer, replace if less
-    // * The hitSide bullshit is just a flag saying that we will only count intersections that hit the front. It's a filter
-
     RenderScene scene{};
     LoadScene(scene, "../scene.xml");
 
-    //scene.camera.up.Normalize();
-    //scene.camera.dir.Normalize();
     scene.camera.dir = -(scene.camera.dir).GetNormalized();
     const Vec3f right{ scene.camera.up.Cross(scene.camera.dir).GetNormalized() };
     scene.camera.up = scene.camera.dir.Cross(right).GetNormalized();
     const Matrix3f cameraMat{ right, scene.camera.up, scene.camera.dir };
-    //Transformation cameraTransform{};
-    //cameraTransform.Transform(cameraMat);
-    //cameraTransform.Translate(scene.camera.pos);
 
     constexpr float Pi = 3.14159265358979323846f;
     const float imagePlaneHeight{ 2 * tanf((static_cast<float>(scene.camera.fov) * Pi / 180.0f) / 2.0f) };
@@ -80,8 +59,10 @@ int main()
             //const Ray ray{ Vec3f{ 0.0f }, rayDir.GetNormalized() };
             const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir).GetNormalized() };
 
+            float closestDepth{ BIGFLOAT };
             for (int nodeIndex{ 0 }; nodeIndex < scene.rootNode.GetNumChild(); ++nodeIndex)
-                scene.renderImage.GetZBuffer()[j * scene.camera.imgWidth + i] = getClosestCollision(scene.rootNode.GetChild(nodeIndex), worldRay);
+                closestDepth = fmin(closestDepth, getClosestCollision(scene.rootNode.GetChild(nodeIndex), worldRay));
+            scene.renderImage.GetZBuffer()[j * scene.camera.imgWidth + i] = closestDepth;
         }
     }
 
