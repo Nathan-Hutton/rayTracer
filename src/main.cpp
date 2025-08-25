@@ -7,7 +7,7 @@
 
 int LoadScene( RenderScene &scene, char const *filename );
 
-bool shootRay(const Node* const node, const Ray& ray, HitInfo& hitInfo)
+bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 {
     const Object* obj{ node->GetNodeObj() };
     Ray localRay{ node->ToNodeCoords(ray) };
@@ -16,9 +16,16 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& hitInfo)
     bool hitObject{ false };
     if (obj != nullptr)
     {
+        HitInfo hitInfo{};
+        hitInfo.Init();
         if (obj->IntersectRay(localRay, hitInfo))
         {
-            hitInfo.node = node;
+            const Vec3f hitPoint{ localRay.p + localRay.dir.GetNormalized() * hitInfo.z };
+            const Vec3f hitPointInParentSpace{ node->TransformFrom(hitPoint) };
+            const float parentSpaceHitPointDepth{ (hitPointInParentSpace - ray.p).Length() };
+
+            bestHitInfo.node = node;
+            bestHitInfo.z = parentSpaceHitPointDepth;
             hitObject = true;
         }
     }
@@ -29,37 +36,16 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& hitInfo)
         newHitInfo.Init();
         if (shootRay(node->GetChild(i), localRay, newHitInfo))
         {
-            if (newHitInfo.z < hitInfo.z)
+            if (newHitInfo.z < bestHitInfo.z)
             {
                 newHitInfo.node = node->GetChild(i);
-                hitInfo = newHitInfo;
+                bestHitInfo = newHitInfo;
             }
             hitObject = true;
         }
     }
 
     return hitObject;
-}
-
-float getClosestCollision(const Node* const node, const Ray& ray)
-{
-    HitInfo hitInfo{};
-    hitInfo.Init();
-    hitInfo.node = node;
-
-    Ray localRay{ node->ToNodeCoords(ray) };
-    localRay.dir.Normalize();
-
-    node->GetNodeObj()->IntersectRay(localRay, hitInfo);
-    float closestDepth{ hitInfo.z };
-
-    for (int i{ 0 }; i < node->GetNumChild(); ++i)
-    {
-        const float closestChildCollisionDepth{ getClosestCollision(node->GetChild(i), localRay) };
-        closestDepth = fmin(closestDepth, closestChildCollisionDepth);
-    }
-
-    return closestDepth;
 }
 
 int main()
@@ -98,15 +84,9 @@ int main()
             HitInfo hitInfo{};
             hitInfo.Init();
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
-            {
                 pixels[j * scene.camera.imgWidth + i] = Color24{ 255, 255, 255 };
-                depthValues[j * scene.camera.imgWidth + i] = hitInfo.z;
-            }
-            //float closestDepth{ BIGFLOAT };
-            //for (int nodeIndex{ 0 }; nodeIndex < scene.rootNode.GetNumChild(); ++nodeIndex)
-                //closestDepth = fmin(closestDepth, getClosestCollision(scene.rootNode.GetChild(nodeIndex), worldRay));
-                //shootRay();
-            //scene.renderImage.GetZBuffer()[j * scene.camera.imgWidth + i] = closestDepth;
+
+            depthValues[j * scene.camera.imgWidth + i] = hitInfo.z;
         }
     }
 
