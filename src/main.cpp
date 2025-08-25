@@ -32,14 +32,18 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 
     for (int i{ 0 }; i < node->GetNumChild(); ++i)
     {
-        HitInfo newHitInfo{};
-        newHitInfo.Init();
-        if (shootRay(node->GetChild(i), localRay, newHitInfo))
+        HitInfo childHitInfo{};
+        childHitInfo.Init();
+        if (shootRay(node->GetChild(i), localRay, childHitInfo))
         {
-            if (newHitInfo.z < bestHitInfo.z)
+            const Vec3 hitPoint{ localRay.p + localRay.dir.GetNormalized() * childHitInfo.z };
+            const Vec3f hitPointInParentSpace{ node->TransformFrom(hitPoint) };
+            const float parentSpaceHitPointDepth{ (hitPointInParentSpace - ray.p).Length() };
+
+            if (parentSpaceHitPointDepth < bestHitInfo.z)
             {
-                newHitInfo.node = node->GetChild(i);
-                bestHitInfo = newHitInfo;
+                bestHitInfo.node = node->GetChild(i);
+                bestHitInfo.z = parentSpaceHitPointDepth;
             }
             hitObject = true;
         }
