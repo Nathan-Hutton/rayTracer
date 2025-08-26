@@ -3,25 +3,23 @@
 #include <iostream>
 #include <cmath>
 
-bool Sphere::IntersectRay( Ray const &normalizedLocalRay, HitInfo &hInfo, int hitSide ) const
+bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const
 {
-    const float sphereToRayDist{ -normalizedLocalRay.p.Dot(normalizedLocalRay.dir) };
-    const Vec3f projectCenterToRayDir{ normalizedLocalRay.p + normalizedLocalRay.dir * sphereToRayDist };
+    const float a{ localRay.dir.Dot(localRay.dir) };
+    const float b{ 2 * localRay.dir.Dot(localRay.p) };
+    const float c{ localRay.p.Dot(localRay.p) - 1.0f };
 
-    if (projectCenterToRayDir.Length() > 1.0f)
-        return false;
+    const float discriminant{ b*b - 4*a*c };
+    if (discriminant < 0.0f) return hitSide == HIT_NONE;
 
-    const float x{ sqrtf(1.0f - projectCenterToRayDir.LengthSquared()) };
-    const float hitPoint1{ sphereToRayDist - x };
-    if (hitPoint1 < 0.0f)
-        return false;
+    const float discriminantSquareRoot{ sqrtf(discriminant) };
+    const float inverse2A{ 1.0f / (2.0f * a) };
+    const float t1{ (-b - discriminantSquareRoot) * inverse2A };
+    //const float t2{ (-b + discriminantSquareRoot) * inverse2A };
 
-    // Maybe this is unnecessary?
-    const Vec3f surfaceHitSpot{ normalizedLocalRay.p + normalizedLocalRay.dir * hitPoint1 };
-    if (surfaceHitSpot.GetNormalized().Dot(normalizedLocalRay.dir) > 0.0f)
-        return false;
+    if (t1 < 0.0f) return false;
 
-    hInfo.z = hitPoint1;
-    hInfo.front = true;
+    hitInfo.z = t1;
     return true;
 }
+

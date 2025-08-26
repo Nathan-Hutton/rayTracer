@@ -1,7 +1,6 @@
 #include "scene.h"
 #include "cyCore/cyVector.h"
 #include "cyCore/cyMatrix.h"
-//#include "viewport.cpp"
 
 #include <iostream>
 #include <cmath>
@@ -13,7 +12,6 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 {
     const Object* obj{ node->GetNodeObj() };
     Ray localRay{ node->ToNodeCoords(ray) };
-    localRay.dir.Normalize();
 
     bool hitObject{ false };
     if (obj != nullptr)
@@ -22,12 +20,8 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         hitInfo.Init();
         if (obj->IntersectRay(localRay, hitInfo))
         {
-            const Vec3f localHitPoint{ localRay.p + localRay.dir.GetNormalized() * hitInfo.z };
-            const Vec3f hitPointInParentSpace{ node->TransformFrom(localHitPoint) };
-            const float parentSpaceHitPointDepth{ (hitPointInParentSpace - ray.p).Length() };
-
             bestHitInfo.node = node;
-            bestHitInfo.z = parentSpaceHitPointDepth;
+            bestHitInfo.z = hitInfo.z;
             hitObject = true;
         }
     }
@@ -38,14 +32,10 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         childHitInfo.Init();
         if (shootRay(node->GetChild(i), localRay, childHitInfo))
         {
-            const Vec3 localHitPoint{ localRay.p + localRay.dir.GetNormalized() * childHitInfo.z };
-            const Vec3f hitPointInParentSpace{ node->TransformFrom(localHitPoint) };
-            const float parentSpaceHitPointDepth{ (hitPointInParentSpace - ray.p).Length() };
-
-            if (parentSpaceHitPointDepth < bestHitInfo.z)
+            if (childHitInfo.z < bestHitInfo.z)
             {
                 bestHitInfo.node = node->GetChild(i);
-                bestHitInfo.z = parentSpaceHitPointDepth;
+                bestHitInfo.z = childHitInfo.z;
             }
             hitObject = true;
         }
@@ -84,7 +74,8 @@ int main()
                 y,
                 -1.0f
             };
-            const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir).GetNormalized() };
+            //const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir).GetNormalized() };
+            const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir) };
 
 
             HitInfo hitInfo{};
