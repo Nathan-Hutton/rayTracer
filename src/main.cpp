@@ -74,7 +74,6 @@ int main()
                 y,
                 -1.0f
             };
-            //const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir).GetNormalized() };
             const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir) };
 
 
