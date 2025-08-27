@@ -1,0 +1,13 @@
+Why does the Material class have its own Shade method?
+
+- I think that what we do is we call RayIntersect on the spheres and in that method, we record the local surface normal and hit point in hitInfo
+- In Color getPixelColor called after shootRay (using the hitInfo), we pass the ray and hitInfo, and we transform the hitPoint and surfaceNormal into world space.
+- Still make sure to record depth info
+
+In this method:
+Variables needed:
+- Vec3 going toward camera
+- Vec3 goong toward light
+- Surface normal
+
+Shade everything in world space

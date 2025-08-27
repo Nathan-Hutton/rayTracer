@@ -20,8 +20,7 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         hitInfo.Init();
         if (obj->IntersectRay(localRay, hitInfo))
         {
-            bestHitInfo.node = node;
-            bestHitInfo.z = hitInfo.z;
+            bestHitInfo = hitInfo;
             hitObject = true;
         }
     }
@@ -33,10 +32,7 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         if (shootRay(node->GetChild(i), localRay, childHitInfo))
         {
             if (childHitInfo.z < bestHitInfo.z)
-            {
-                bestHitInfo.node = node->GetChild(i);
-                bestHitInfo.z = childHitInfo.z;
-            }
+                bestHitInfo = childHitInfo;
             hitObject = true;
         }
     }
@@ -52,7 +48,7 @@ int main()
     const Vec3 camZ{ -scene.camera.dir.GetNormalized() };
     const Vec3f camX{ scene.camera.up.Cross(camZ).GetNormalized() };
     const Vec3f camY{ camZ.Cross(camX) };
-    const Matrix3f cameraMat{ camX, camY, camZ };
+    const Matrix3f cameraToWorld{ camX, camY, camZ };
 
     constexpr float Pi = 3.14159265358979323846f;
     const float imagePlaneHeight{ 2 * tanf((static_cast<float>(scene.camera.fov) * Pi / 180.0f) / 2.0f) };
@@ -69,12 +65,7 @@ int main()
         {
             const float x{ -imagePlaneWidth * 0.5f + pixelSize * (static_cast<float>(i) + 0.5f) };
             const float y{ imagePlaneHeight * 0.5f - pixelSize * (static_cast<float>(j) + 0.5f) };
-            Vec3f rayDir {
-                x,
-                y,
-                -1.0f
-            };
-            const Ray worldRay{ scene.camera.pos, (cameraMat * rayDir) };
+            const Ray worldRay{ scene.camera.pos, (cameraToWorld * Vec3f{ x, y, -1.0f }) };
 
 
             HitInfo hitInfo{};

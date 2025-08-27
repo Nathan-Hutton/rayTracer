@@ -16,7 +16,7 @@
  
 #include "scene.h"
 #include "objects.h"
-#include "materials.h"
+#include "Materials.h"
 #include "lights.h"
 #include "tinyxml2.h"
  

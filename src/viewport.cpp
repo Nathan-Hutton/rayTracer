@@ -21,7 +21,7 @@
 #include "scene.h"
 #include "objects.h"
 #include "lights.h"
-#include "materials.h"
+#include "Materials.h"
 #include <stdlib.h>
 #include <time.h>
  

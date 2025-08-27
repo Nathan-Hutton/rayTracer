@@ -20,6 +20,8 @@ bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
     if (t1 < 0.0f) return false;
 
     hitInfo.z = t1;
+    hitInfo.p = localRay.p + localRay.dir * t1;
+    hitInfo.N = hitInfo.p;
     return true;
 }
 
