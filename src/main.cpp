@@ -8,6 +8,26 @@
 int LoadScene( RenderScene &scene, char const *filename );
 void ShowViewport( RenderScene *scene );
 
+Color shade(const Ray& worldRay, const HitInfo& hitInfo, const LightList& lightList)
+{
+    Color finalColor{};
+
+    const Node* node{ hitInfo.node };
+    const Vec3f worldSpaceHitPoint{ node->TransformFrom(hitInfo.p) };
+    const Vec3f worldSpaceNormal{ node->NormalTransformFrom(hitInfo.N) };
+
+    for (const Light* const light : lightList)
+    {
+        if (light->IsAmbient())
+        {
+            finalColor += Color{ light->Illuminate(worldSpaceHitPoint, worldSpaceNormal) };
+            continue;
+        }
+    }
+
+    return finalColor;
+}
+
 bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 {
     const Object* obj{ node->GetNodeObj() };
@@ -21,6 +41,7 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         if (obj->IntersectRay(localRay, hitInfo))
         {
             bestHitInfo = hitInfo;
+            bestHitInfo.node = node;
             hitObject = true;
         }
     }
@@ -32,7 +53,10 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         if (shootRay(node->GetChild(i), localRay, childHitInfo))
         {
             if (childHitInfo.z < bestHitInfo.z)
+            {
                 bestHitInfo = childHitInfo;
+                bestHitInfo.node = node->GetChild(i);
+            }
             hitObject = true;
         }
     }
@@ -71,7 +95,10 @@ int main()
             HitInfo hitInfo{};
             hitInfo.Init();
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
-                pixels[j * scene.camera.imgWidth + i] = Color24{ 255, 255, 255 };
+            {
+                pixels[j * scene.camera.imgWidth + i] = Color24{ shade(worldRay, hitInfo, scene.lights) };
+                //pixels[j * scene.camera.imgWidth + i] = Color24{ 255, 255, 255 };
+            }
 
             depthValues[j * scene.camera.imgWidth + i] = hitInfo.z;
         }
