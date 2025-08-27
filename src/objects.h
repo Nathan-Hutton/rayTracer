@@ -2,8 +2,8 @@
 ///
 /// \file       objects.h 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    1.1
-/// \date       August 21, 2025
+/// \version    2.0
+/// \date       August 23, 2025
 ///
 /// \brief Example source for CS 6620 - University of Utah.
 ///
@@ -24,8 +24,8 @@
 class Sphere : public Object
 {
 public:
-    virtual bool IntersectRay( Ray const &normalizedLocalRay, HitInfo &hInfo, int hitSide=HIT_FRONT ) const;
-    virtual void ViewportDisplay() const;
+    bool IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT ) const override;
+    void ViewportDisplay( Material const *mtl ) const override;
 };
  
 //-------------------------------------------------------------------------------

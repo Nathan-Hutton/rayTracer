@@ -2,8 +2,8 @@
 ///
 /// \file       viewport.cpp 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    1.2
-/// \date       August 22, 2025
+/// \version    2.1
+/// \date       August 25, 2025
 ///
 /// \brief Example source for CS 6620 - University of Utah.
 ///
@@ -20,6 +20,8 @@
  
 #include "scene.h"
 #include "objects.h"
+#include "lights.h"
+#include "materials.h"
 #include <stdlib.h>
 #include <time.h>
  
@@ -47,6 +49,7 @@ void ShowViewport( RenderScene *scene );
 //-------------------------------------------------------------------------------
  
 RenderScene *theScene = nullptr;
+MtlBlinn defaultMaterial;
  
 //-------------------------------------------------------------------------------
  
@@ -73,12 +76,11 @@ enum MouseMode {
     MOUSEMODE_DEBUG,
 };
  
-static Mode     mode        = MODE_READY;       // Rendering mode
-static ViewMode viewMode    = VIEWMODE_OPENGL;  // Display mode
-static MouseMode mouseMode  = MOUSEMODE_NONE;   // Mouse mode
-static int      startTime;                      // Start time of rendering
-static float viewAngle1=0, viewAngle2=0;
-static GLuint viewTexture;
+static Mode      mode      = MODE_READY;        // Rendering mode
+static ViewMode  viewMode  = VIEWMODE_OPENGL;   // Display mode
+static MouseMode mouseMode = MOUSEMODE_NONE;    // Mouse mode
+static int       startTime;                     // Start time of rendering
+static GLuint    viewTexture;
  
 //-------------------------------------------------------------------------------
  
@@ -123,15 +125,9 @@ void ShowViewport( RenderScene *scene )
     glPointSize(3.0);
     glEnable( GL_CULL_FACE );
  
-    #define LIGHTAMBIENT 0.1f
-    glEnable( GL_LIGHT0 );
-    float lightamb[4] =  { LIGHTAMBIENT, LIGHTAMBIENT, LIGHTAMBIENT, 1.0f };
-    glLightfv( GL_LIGHT0, GL_AMBIENT, lightamb );
- 
-    #define LIGHTDIF0 1.0f
-    float lightdif0[4] = { LIGHTDIF0, LIGHTDIF0, LIGHTDIF0, 1.0f };
-    glLightfv( GL_LIGHT0, GL_DIFFUSE, lightdif0 );
-    glLightfv( GL_LIGHT0, GL_SPECULAR, lightdif0 );
+    float zero[] = {0,0,0,0};
+    glLightModelfv( GL_LIGHT_MODEL_AMBIENT, zero );
+    glLightModeli( GL_LIGHT_MODEL_LOCAL_VIEWER, 1 );
  
     glEnable(GL_NORMALIZE);
  
@@ -166,9 +162,13 @@ void GlutReshape( int w, int h )
  
 //-------------------------------------------------------------------------------
  
-void DrawNode( const Node *node )
+void DrawNode( Node const *node )
 {
     glPushMatrix();
+ 
+    const Material *mtl = node->GetMaterial();
+    if ( !mtl ) mtl = &defaultMaterial;
+    mtl->SetViewportMaterial();
  
     Matrix3f tm = node->GetTransform();
     Vec3f p = node->GetPosition();
@@ -176,7 +176,7 @@ void DrawNode( const Node *node )
     glMultMatrixf( m );
  
     const Object *obj = node->GetNodeObj();
-    if ( obj ) obj->ViewportDisplay();
+    if ( obj ) obj->ViewportDisplay(mtl);
  
     for ( int i=0; i<node->GetNumChild(); i++ ) {
         DrawNode( node->GetChild(i) );
@@ -200,8 +200,21 @@ void DrawScene()
     Vec3f u = theScene->camera.up;
     gluLookAt( p.x, p.y, p.z,  t.x, t.y, t.z,  u.x, u.y, u.z );
  
-    glRotatef( viewAngle1, 1, 0, 0 );
-    glRotatef( viewAngle2, 0, 0, 1 );
+    if ( theScene->lights.size() > 0 ) {
+        for ( unsigned int i=0; i<theScene->lights.size(); i++ ) {
+            theScene->lights[i]->SetViewportLight(i);
+        }
+    } else {
+        // Default lighting for scenes without a light
+        float white[] = {1,1,1,1};
+        float black[] = {0,0,0,0};
+        Vec4f p(theScene->camera.pos, 1);
+        glEnable ( GL_LIGHT0 );
+        glLightfv( GL_LIGHT0, GL_AMBIENT,  black );
+        glLightfv( GL_LIGHT0, GL_DIFFUSE,  white );
+        glLightfv( GL_LIGHT0, GL_SPECULAR, white );
+        glLightfv( GL_LIGHT0, GL_POSITION, &p.x );
+    }
  
     DrawNode( &theScene->rootNode );
  
@@ -213,28 +226,7 @@ void DrawScene()
  
 //-------------------------------------------------------------------------------
  
-void DrawProgressBar(float done)
-{
-    glMatrixMode( GL_PROJECTION );
-    glPushMatrix();
-    glLoadIdentity();
- 
-    glBegin(GL_LINES);
-    glColor3f(1,1,1);
-    glVertex2f(-1,-1);
-    glVertex2f(done*2-1,-1);
-    glColor3f(0,0,0);
-    glVertex2f(done*2-1,-1);
-    glVertex2f(1,-1);
-    glEnd();
- 
-    glPopMatrix();
-    glMatrixMode( GL_MODELVIEW );
-}
- 
-//-------------------------------------------------------------------------------
- 
-void DrawImage( const void *data, GLenum type, GLenum format )
+void DrawImage( void const *data, GLenum type, GLenum format )
 {
     glBindTexture(GL_TEXTURE_2D, viewTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, theScene->renderImage.GetWidth(), theScene->renderImage.GetHeight(), 0, format, type, data); 
@@ -267,6 +259,27 @@ void DrawImage( const void *data, GLenum type, GLenum format )
  
 //-------------------------------------------------------------------------------
  
+void DrawProgressBar(float done)
+{
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+    glLoadIdentity();
+ 
+    glBegin(GL_LINES);
+    glColor3f(1,1,1);
+    glVertex2f(-1,-1);
+    glVertex2f(done*2-1,-1);
+    glColor3f(0,0,0);
+    glVertex2f(done*2-1,-1);
+    glVertex2f(1,-1);
+    glEnd();
+ 
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+}
+ 
+//-------------------------------------------------------------------------------
+ 
 void DrawRenderProgressBar()
 {
     int rp = theScene->renderImage.GetNumRenderedPixels();
@@ -285,15 +298,12 @@ void GlutDisplay()
         DrawScene();
         break;
     case VIEWMODE_IMAGE:
-        //glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
-        //glDrawPixels( renderImage.GetWidth(), renderImage.GetHeight(), GL_RGB, GL_UNSIGNED_BYTE, renderImage.GetPixels() );
         DrawImage( theScene->renderImage.GetPixels(), GL_UNSIGNED_BYTE, GL_RGB );
         DrawRenderProgressBar();
         break;
     case VIEWMODE_Z:
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
         if ( ! theScene->renderImage.GetZBufferImage() ) theScene->renderImage.ComputeZBufferImage();
-        //glDrawPixels( renderImage.GetWidth(), renderImage.GetHeight(), GL_LUMINANCE, GL_UNSIGNED_BYTE, renderImage.GetZBufferImage() );
         DrawImage( theScene->renderImage.GetZBufferImage(), GL_UNSIGNED_BYTE, GL_LUMINANCE );
         break;
     }
@@ -326,7 +336,7 @@ void GlutIdle()
  
 //-------------------------------------------------------------------------------
  
-void GlutKeyboard(unsigned char key, [[maybe_unused]] int x, [[maybe_unused]] int y)
+void GlutKeyboard(unsigned char key, int x, int y)
 {
     switch ( key ) {
     case 27:    // ESC
@@ -367,7 +377,6 @@ void GlutKeyboard(unsigned char key, [[maybe_unused]] int x, [[maybe_unused]] in
         }
         break;
     case '1':
-        viewAngle1 = viewAngle2 = 0;
         viewMode = VIEWMODE_OPENGL;
         glutSetWindowTitle(WINDOW_TITLE_OPENGL);
         glutPostRedisplay();
@@ -392,7 +401,7 @@ void PrintPixelData(int x, int y)
     if ( x >= 0 && y >= 0 && x < theScene->renderImage.GetWidth() && y < theScene->renderImage.GetHeight() ) {
         Color24 *colors = theScene->renderImage.GetPixels();
         float *zbuffer = theScene->renderImage.GetZBuffer();
-        int i = (theScene->renderImage.GetHeight() - y - 1 ) *theScene->renderImage.GetWidth() + x;
+        int i = y*theScene->renderImage.GetWidth() + x;
         printf("Pixel [ %d, %d ] Color24: %d, %d, %d   Z: %f\n", x, y, colors[i].r, colors[i].g, colors[i].b, zbuffer[i] );
     }
 }
@@ -421,15 +430,13 @@ void GlutMotion(int x, int y)
         case MOUSEMODE_DEBUG:
             PrintPixelData(x,y);
             break;
-        case MOUSEMODE_NONE:
-            break;
     }
 }
  
 //-------------------------------------------------------------------------------
 // Viewport Methods for various classes
 //-------------------------------------------------------------------------------
-void Sphere::ViewportDisplay() const
+void Sphere::ViewportDisplay( Material const *mtl ) const
 {
     static GLUquadric *q = nullptr;
     if ( q == nullptr ) {
@@ -437,6 +444,37 @@ void Sphere::ViewportDisplay() const
     }
     gluSphere(q,1,50,50);
 }
+void GenLight::SetViewportParam( int lightID, ColorA ambient, ColorA intensity, Vec4f pos ) const
+{
+    glEnable ( GL_LIGHT0 + lightID );
+    glLightfv( GL_LIGHT0 + lightID, GL_AMBIENT,  &ambient.r );
+    glLightfv( GL_LIGHT0 + lightID, GL_DIFFUSE,  &intensity.r );
+    glLightfv( GL_LIGHT0 + lightID, GL_SPECULAR, &intensity.r );
+    glLightfv( GL_LIGHT0 + lightID, GL_POSITION, &pos.x );
+}
+void MtlPhong::SetViewportMaterial( int subMtlID ) const
+{
+    ColorA d(diffuse);
+    ColorA s(specular);
+    glMaterialfv( GL_FRONT, GL_AMBIENT_AND_DIFFUSE, &d.r );
+    glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
+    glMaterialf( GL_FRONT, GL_SHININESS, glossiness*2 );
+}
+void MtlBlinn::SetViewportMaterial( int subMtlID ) const
+{
+    ColorA d(diffuse);
+    ColorA s(specular);
+    glMaterialfv( GL_FRONT, GL_AMBIENT_AND_DIFFUSE, &d.r );
+    glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
+    glMaterialf( GL_FRONT, GL_SHININESS, glossiness );
+}
+void MtlGGX::SetViewportMaterial( int subMtlID ) const
+{
+    ColorA d(baseColor*(1-metallic*(1-0.16f*roughness))*(1/Pi<float>()));
+    ColorA s( (metallic/roughness)*baseColor + Color(0.16f*(1-metallic)*reflectance*reflectance/roughness) );
+    glMaterialfv( GL_FRONT, GL_AMBIENT_AND_DIFFUSE, &d.r );
+    glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
+    glMaterialf( GL_FRONT, GL_SHININESS, (1-roughness)*128 );
+}
 //-------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------
-
