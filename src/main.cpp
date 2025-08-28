@@ -10,7 +10,7 @@ void ShowViewport( RenderScene *scene );
 
 bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 {
-    const Object* obj{ node->GetNodeObj() };
+    const Object* const obj{ node->GetNodeObj() };
     Ray localRay{ node->ToNodeCoords(ray) };
 
     bool hitObject{ false };
@@ -20,8 +20,10 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
         hitInfo.Init();
         if (obj->IntersectRay(localRay, hitInfo))
         {
-            bestHitInfo = hitInfo;
             bestHitInfo.node = node;
+            bestHitInfo.z = hitInfo.z;
+            bestHitInfo.N = node->NormalTransformFrom(hitInfo.N);
+            bestHitInfo.p = node->TransformFrom(hitInfo.p);
             hitObject = true;
         }
     }
@@ -30,14 +32,17 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
     {
         HitInfo childHitInfo{};
         childHitInfo.Init();
-        if (shootRay(node->GetChild(i), localRay, childHitInfo))
+        const Node* const childNode{ node->GetChild(i) };
+        if (shootRay(childNode, localRay, childHitInfo))
         {
+            hitObject = true;
             if (childHitInfo.z < bestHitInfo.z)
             {
-                bestHitInfo = childHitInfo;
-                bestHitInfo.node = node->GetChild(i);
+                bestHitInfo.node = childNode;
+                bestHitInfo.z = childHitInfo.z;
+                bestHitInfo.N = node->NormalTransformFrom(childHitInfo.N);
+                bestHitInfo.p = node->TransformFrom(childHitInfo.p);
             }
-            hitObject = true;
         }
     }
 

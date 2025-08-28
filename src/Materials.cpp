@@ -10,17 +10,26 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
 {
     Color finalColor{};
 
-    const Node* node{ hInfo.node };
-    const Vec3f worldSpaceHitPoint{ node->TransformFrom(hInfo.p) };
-    const Vec3f worldSpaceNormal{ node->NormalTransformFrom(hInfo.N) };
+    const Vec3f normal{ hInfo.N.GetNormalized() };
+    //return Color{ normal.x, normal.y, normal.z };
 
     for (const Light* const light : lights)
     {
+        const Color lightIntensity{ light->Illuminate(hInfo.p, normal) };
+
         if (light->IsAmbient())
         {
-            finalColor += diffuse * light->Illuminate(worldSpaceHitPoint, worldSpaceNormal);
+            finalColor += diffuse * lightIntensity;
             continue;
         }
+
+        const Vec3f lightDir{ -light->Direction(hInfo.p) };
+        const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
+        finalColor += diffuse * lightIntensity * geometryTerm;
+
+        //const Vec3f halfway{ (ray.dir + lightDir).GetNormalized() };
+        //const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+        //finalColor += specular * blinnTerm * lightIntensity;
     }
 
     return finalColor;
