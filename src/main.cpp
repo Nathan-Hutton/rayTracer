@@ -17,13 +17,11 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
     if (obj != nullptr)
     {
         HitInfo hitInfo{};
-        hitInfo.Init();
         if (obj->IntersectRay(localRay, hitInfo))
         {
+            bestHitInfo = hitInfo;
             bestHitInfo.node = node;
-            bestHitInfo.z = hitInfo.z;
-            bestHitInfo.N = node->NormalTransformFrom(hitInfo.N);
-            bestHitInfo.p = node->TransformFrom(hitInfo.p);
+            node->FromNodeCoords(bestHitInfo);
             hitObject = true;
         }
     }
@@ -31,18 +29,16 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
     for (int i{ 0 }; i < node->GetNumChild(); ++i)
     {
         HitInfo childHitInfo{};
-        childHitInfo.Init();
         const Node* const childNode{ node->GetChild(i) };
         if (shootRay(childNode, localRay, childHitInfo))
         {
-            hitObject = true;
             if (childHitInfo.z < bestHitInfo.z)
             {
-                bestHitInfo.node = childNode;
-                bestHitInfo.z = childHitInfo.z;
-                bestHitInfo.N = node->NormalTransformFrom(childHitInfo.N);
-                bestHitInfo.p = node->TransformFrom(childHitInfo.p);
+                bestHitInfo = childHitInfo;
+                //bestHitInfo.node = childNode;
+                node->FromNodeCoords(bestHitInfo);
             }
+            hitObject = true;
         }
     }
 
@@ -78,7 +74,6 @@ int main()
 
 
             HitInfo hitInfo{};
-            hitInfo.Init();
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
             {
                 pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights) };
