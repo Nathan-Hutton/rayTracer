@@ -27,9 +27,9 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
         const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
         finalColor += diffuse * lightIntensity * geometryTerm;
 
-        //const Vec3f halfway{ (ray.dir + lightDir).GetNormalized() };
-        //const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-        //finalColor += specular * blinnTerm * lightIntensity;
+        const Vec3f halfway{ (-ray.dir.GetNormalized() + lightDir).GetNormalized() };
+        const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+        finalColor += specular * pow(blinnTerm, glossiness) * lightIntensity;
     }
 
     return finalColor;

@@ -35,7 +35,6 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
             if (childHitInfo.z < bestHitInfo.z)
             {
                 bestHitInfo = childHitInfo;
-                //bestHitInfo.node = childNode;
                 node->FromNodeCoords(bestHitInfo);
             }
             hitObject = true;
