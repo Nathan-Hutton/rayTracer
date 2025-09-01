@@ -27,10 +27,14 @@ protected:
     void SetViewportParam( int lightID, ColorA ambient, ColorA intensity, Vec4f pos ) const;
     static float Shadow( Ray const &ray, float t_max=BIGFLOAT )
     {
-        const Ray shadowRay{ ray.p + ray.dir * 0.001f, ray.dir };
+        const Ray shadowRay{ ray.p + ray.dir * 0.0002f, ray.dir };
         HitInfo hitInfo{};
 
-        return shootRay(lightsGlobalVars::rootNode, shadowRay, hitInfo) ? 0.0f : 1.0f;
+        if (shootRay(lightsGlobalVars::rootNode, shadowRay, hitInfo) && hitInfo.z < t_max)
+        {
+            return 0.0f;
+        }
+        return 1.0f;
     }
 };
  

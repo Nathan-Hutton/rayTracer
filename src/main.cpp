@@ -50,7 +50,7 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 int main()
 {
     RenderScene scene{};
-    LoadScene(scene, "../simpleScene.xml");
+    LoadScene(scene, "../boxScene.xml");
     lightsGlobalVars::rootNode = &scene.rootNode;
 
     const Vec3 camZ{ -scene.camera.dir.GetNormalized() };
@@ -88,8 +88,8 @@ int main()
     }
 
     scene.renderImage.ComputeZBufferImage();
-    scene.renderImage.SaveZImage("../simpleZbuffer.png");
-    scene.renderImage.SaveImage("../simpleImage.png");
+    scene.renderImage.SaveZImage("../boxZbuffer.png");
+    scene.renderImage.SaveImage("../boxImage.png");
 
     ShowViewport(&scene);
     return 0;
