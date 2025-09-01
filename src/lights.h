@@ -13,6 +13,11 @@
 #define _LIGHTS_H_INCLUDED_
  
 #include "scene.h"
+
+namespace lightsGlobalVars
+{
+    extern Node* rootNode;
+}
  
 //-------------------------------------------------------------------------------
  
@@ -22,7 +27,10 @@ protected:
     void SetViewportParam( int lightID, ColorA ambient, ColorA intensity, Vec4f pos ) const;
     static float Shadow( Ray const &ray, float t_max=BIGFLOAT )
     {
-        return 0.0f;
+        const Ray shadowRay{ ray.p + ray.dir * 0.001f, ray.dir };
+        HitInfo hitInfo{};
+
+        return shootRay(lightsGlobalVars::rootNode, shadowRay, hitInfo) ? 0.0f : 1.0f;
     }
 };
  

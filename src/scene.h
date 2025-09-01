@@ -34,7 +34,7 @@ using namespace cy;
 #define BIGFLOAT std::numeric_limits<float>::max()
  
 //-------------------------------------------------------------------------------
- 
+
 class Ray
 {
 public:
@@ -68,6 +68,8 @@ struct HitInfo
 };
  
 //-------------------------------------------------------------------------------
+
+bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo);
  
 class ItemBase
 {

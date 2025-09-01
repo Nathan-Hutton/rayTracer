@@ -1,4 +1,5 @@
 #include "scene.h"
+#include "lights.h"
 #include "cyCore/cyVector.h"
 #include "cyCore/cyMatrix.h"
 
@@ -7,6 +8,8 @@
 
 int LoadScene( RenderScene &scene, char const *filename );
 void ShowViewport( RenderScene *scene );
+
+Node* lightsGlobalVars::rootNode{ nullptr };
 
 bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 {
@@ -47,7 +50,8 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 int main()
 {
     RenderScene scene{};
-    LoadScene(scene, "../scene.xml");
+    LoadScene(scene, "../simpleScene.xml");
+    lightsGlobalVars::rootNode = &scene.rootNode;
 
     const Vec3 camZ{ -scene.camera.dir.GetNormalized() };
     const Vec3f camX{ scene.camera.up.Cross(camZ).GetNormalized() };
@@ -84,8 +88,8 @@ int main()
     }
 
     scene.renderImage.ComputeZBufferImage();
-    scene.renderImage.SaveZImage("../zbuffer.png");
-    scene.renderImage.SaveImage("../image.png");
+    scene.renderImage.SaveZImage("../simpleZbuffer.png");
+    scene.renderImage.SaveImage("../simpleImage.png");
 
     ShowViewport(&scene);
     return 0;
