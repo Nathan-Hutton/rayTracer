@@ -44,18 +44,21 @@
       <specular value="0"/>
     </material>
     <material type="blinn" name="wallGreen">
-      <diffuse  r="0.4" g="0.8" b="0.4"/>
+      <diffuse r="0.4" g="0.8" b="0.4"/>
       <specular value="0"/>
     </material>
-    <material type="blinn" name="mtl1">
+   <material type="blinn" name="mtl1">
       <diffuse  r="0.8" g="0.2" b="0.2"/>
       <specular r="1.0" g="1.0" b="1.0" value="0.7"/>
       <glossiness value="20"/>
+	  <reflection value="0.7"/>
     </material>
     <material type="blinn" name="mtl2">
       <diffuse  r="0.2" g="0.2" b="0.8"/>
       <specular r="1.0" g="1.0" b="1.0" value="0.8"/>
       <glossiness value="10"/>
+	  <refraction value="0.8" index="1.52"/>
+	  <absorption r="0.01" g="0.001" b="0.0001"/>
     </material>
 
     <!-- Lights -->

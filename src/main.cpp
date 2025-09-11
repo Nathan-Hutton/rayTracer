@@ -50,7 +50,7 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
 int main()
 {
     RenderScene scene{};
-    LoadScene(scene, "../simpleScene.xml");
+    LoadScene(scene, "../boxScene.xml");
     lightsGlobalVars::rootNode = &scene.rootNode;
 
     const Vec3 camZ{ -scene.camera.dir.GetNormalized() };
@@ -79,7 +79,7 @@ int main()
             HitInfo hitInfo{};
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
             {
-                pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights) };
+                pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights, 0) };
                 //pixels[j * scene.camera.imgWidth + i] = Color24{ 255, 255, 255 };
             }
 

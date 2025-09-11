@@ -2,8 +2,8 @@
 ///
 /// \file       scene.h 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    2.0
-/// \date       August 23, 2025
+/// \version    4.0
+/// \date       September 3, 2025
 ///
 /// \brief Project source for CS 6620 - University of Utah.
 ///
@@ -34,7 +34,7 @@ using namespace cy;
 #define BIGFLOAT std::numeric_limits<float>::max()
  
 //-------------------------------------------------------------------------------
-
+ 
 class Ray
 {
 public:
@@ -66,10 +66,10 @@ struct HitInfo
     HitInfo() { Init(); }
     void Init() { z=BIGFLOAT; node=nullptr; front=true; }
 };
- 
-//-------------------------------------------------------------------------------
 
 bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo);
+ 
+//-------------------------------------------------------------------------------
  
 class ItemBase
 {
@@ -153,6 +153,20 @@ public:
     void Transform( Matrix3f const &m ) { tm=m*tm; pos=m*pos; itm=tm.GetInverse(); }
  
     void InitTransform() { pos.Zero(); tm.SetIdentity(); itm.SetIdentity(); }
+ 
+    // Transformations
+    Ray ToNodeCoords( Ray const &ray ) const
+    {
+        Ray r;
+        r.p   = TransformTo(ray.p);
+        r.dir = TransformTo(ray.p + ray.dir) - r.p;
+        return r;
+    }
+    void FromNodeCoords( HitInfo &hInfo ) const
+    {
+        hInfo.p = TransformFrom(hInfo.p);
+        hInfo.N = NormalTransformFrom(hInfo.N).GetNormalized();
+    }
 };
  
 //-------------------------------------------------------------------------------
@@ -190,7 +204,8 @@ public:
     // The main method that handles the shading by calling all the lights in the list.
     // ray: incoming ray,
     // hInfo: hit information for the point that is being shaded, lights: the light list,
-    virtual Color Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights) const=0;
+    // bounceCount: permitted number of additional bounces for reflection and refraction.
+    virtual Color Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights, int bounceCount) const=0;
  
     virtual void SetViewportMaterial(int subMtlID=0) const {}   // used for OpenGL display
 };
@@ -247,20 +262,6 @@ public:
     // Material management
     Material const* GetMaterial() const { return mtl; }
     void            SetMaterial(Material *material) { mtl=material; }
- 
-    // Transformations
-    Ray ToNodeCoords( Ray const &ray ) const
-    {
-        Ray r;
-        r.p   = TransformTo(ray.p);
-        r.dir = TransformTo(ray.p + ray.dir) - r.p;
-        return r;
-    }
-    void FromNodeCoords( HitInfo &hInfo ) const
-    {
-        hInfo.p = TransformFrom(hInfo.p);
-        hInfo.N = NormalTransformFrom(hInfo.N).GetNormalized();
-    }
 };
  
 //-------------------------------------------------------------------------------

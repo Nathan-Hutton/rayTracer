@@ -1,7 +1,7 @@
 #include "Materials.h"
 #include <iostream>
 
-Color MtlPhong::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights) const
+Color MtlPhong::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights, int bounceCount) const
 {
     Color finalColor{};
 
@@ -34,7 +34,7 @@ Color MtlPhong::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
     return finalColor;
 }
 
-Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights) const
+Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights, int bounceCount) const
 {
     Color finalColor{};
 
@@ -67,7 +67,7 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
     return finalColor;
 }
 
-Color MtlGGX::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights) const 
+Color MtlMicrofacet::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights, int bounceCount) const
 {
-    return Color();
+    return Color{};
 }

@@ -468,13 +468,6 @@ void MtlBlinn::SetViewportMaterial( int subMtlID ) const
     glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
     glMaterialf( GL_FRONT, GL_SHININESS, glossiness );
 }
-void MtlGGX::SetViewportMaterial( int subMtlID ) const
-{
-    ColorA d(baseColor*(1-metallic*(1-0.16f*roughness))*(1/Pi<float>()));
-    ColorA s( (metallic/roughness)*baseColor + Color(0.16f*(1-metallic)*reflectance*reflectance/roughness) );
-    glMaterialfv( GL_FRONT, GL_AMBIENT_AND_DIFFUSE, &d.r );
-    glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
-    glMaterialf( GL_FRONT, GL_SHININESS, (1-roughness)*128 );
-}
+void MtlMicrofacet::SetViewportMaterial( int subMtlID ) const {}
 //-------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------
