@@ -34,15 +34,24 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
     }
 
     // Calulate reflected color
-    if (bounceCount > 0)
+    if (bounceCount > 0 && reflection.Sum() > 0.0f)
     {
         const Vec3f perfectReflectionDir{ normal * 2 * viewDir.Dot(normal) - viewDir };
         const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
         HitInfo reflectionHitInfo{};
         if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo))
-        {
             finalColor += reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * reflection;
-        }
+    }
+
+    // Calculate refracted color
+    if (bounceCount > 0 && refraction.Sum() > 0.0f)
+    {
+        const float refractionRatio{ 1.0f / ior };
+        const Vec3f refractionDir{ -refractionRatio * viewDir - (sqrt(1.0f - pow(refractionRatio, 2) * pow(1 - (viewDir.Dot(normal)), 2)) - refractionRatio * (viewDir.Dot(normal))) * normal };
+        const Ray refractionRay{ hInfo.p + refractionDir * 0.0002f, refractionDir };
+        HitInfo refractionHitInfo{};
+        if (shootRay(lightsGlobalVars::rootNode, refractionRay, refractionHitInfo))
+            finalColor += refractionHitInfo.node->GetMaterial()->Shade(refractionRay, refractionHitInfo, lights, bounceCount - 1) * refraction;
     }
 
     return finalColor;
