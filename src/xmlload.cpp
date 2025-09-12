@@ -269,8 +269,8 @@ void LoadMaterial( MaterialList &materials, XMLElement *element )
     char const *type = element->Attribute("type");
     if ( type ) {
         if ( StrICmp(type,"phong") ) {
-            printf(" - Phong\n");
-            mtl = loadPhongBlinn( new MtlPhong() );
+            //printf(" - Phong\n");
+            //mtl = loadPhongBlinn( new MtlPhong() );
         } else if ( StrICmp(type,"blinn") ) {
             printf(" - Blinn\n");
             mtl = loadPhongBlinn( new MtlBlinn() );

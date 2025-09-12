@@ -50,12 +50,12 @@ protected:
  
 //-------------------------------------------------------------------------------
  
-class MtlPhong : public MtlBasePhongBlinn
-{
-public:
-    Color Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights, int bounceCount) const override;
-    void SetViewportMaterial(int subMtlID=0) const override;    // used for OpenGL display
-};
+//class MtlPhong : public MtlBasePhongBlinn
+//{
+//public:
+//    Color Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights, int bounceCount) const override;
+//    void SetViewportMaterial(int subMtlID=0) const override;    // used for OpenGL display
+//};
  
 //-------------------------------------------------------------------------------
  

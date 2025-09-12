@@ -31,9 +31,8 @@ protected:
         HitInfo hitInfo{};
 
         if (shootRay(lightsGlobalVars::rootNode, shadowRay, hitInfo) && hitInfo.z < t_max)
-        {
             return 0.0f;
-        }
+
         return 1.0f;
     }
 };

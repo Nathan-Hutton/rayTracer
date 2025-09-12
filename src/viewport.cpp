@@ -2,8 +2,8 @@
 ///
 /// \file       viewport.cpp 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    2.1
-/// \date       August 25, 2025
+/// \version    2.2
+/// \date       August 27, 2025
 ///
 /// \brief Example source for CS 6620 - University of Utah.
 ///
@@ -43,8 +43,8 @@ void ShowViewport( RenderScene *scene );
 //-------------------------------------------------------------------------------
 // To be implemented:
  
-//void BeginRender( RenderScene *scene ); // Called to start rendering (renderer must run in a separate thread)
-//void StopRender (); // Called to end rendering (if it is not already finished)
+void BeginRender( RenderScene *scene ); // Called to start rendering (renderer must run in a separate thread)
+void StopRender (); // Called to end rendering (if it is not already finished)
  
 //-------------------------------------------------------------------------------
  
@@ -452,14 +452,14 @@ void GenLight::SetViewportParam( int lightID, ColorA ambient, ColorA intensity, 
     glLightfv( GL_LIGHT0 + lightID, GL_SPECULAR, &intensity.r );
     glLightfv( GL_LIGHT0 + lightID, GL_POSITION, &pos.x );
 }
-void MtlPhong::SetViewportMaterial( int subMtlID ) const
-{
-    ColorA d(diffuse);
-    ColorA s(specular);
-    glMaterialfv( GL_FRONT, GL_AMBIENT_AND_DIFFUSE, &d.r );
-    glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
-    glMaterialf( GL_FRONT, GL_SHININESS, glossiness*2 );
-}
+//void MtlPhong::SetViewportMaterial( int subMtlID ) const
+//{
+//    ColorA d(diffuse);
+//    ColorA s(specular);
+//    glMaterialfv( GL_FRONT, GL_AMBIENT_AND_DIFFUSE, &d.r );
+//    glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
+//    glMaterialf( GL_FRONT, GL_SHININESS, glossiness*2 );
+//}
 void MtlBlinn::SetViewportMaterial( int subMtlID ) const
 {
     ColorA d(diffuse);
@@ -468,6 +468,20 @@ void MtlBlinn::SetViewportMaterial( int subMtlID ) const
     glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
     glMaterialf( GL_FRONT, GL_SHININESS, glossiness );
 }
-void MtlMicrofacet::SetViewportMaterial( int subMtlID ) const {}
+void MtlMicrofacet::SetViewportMaterial( int subMtlID ) const
+{
+    float ff = (ior-1)/(ior+1);
+    float f0d = ff*ff;
+    Color f0 = (1 - metallic)*f0d + metallic*baseColor;
+    float a = roughness * roughness;
+    float k = a / 2;
+    float D = 1 / ( Pi<float>() * a*a );
+    float t = roughness*roughness*(3 - 2*roughness);
+    ColorA d( baseColor*( (1-metallic)*(1-f0) + metallic*t*0.25f )/Pi<float>() );
+    ColorA s( f0*D/4 );
+    glMaterialfv( GL_FRONT, GL_AMBIENT_AND_DIFFUSE, &d.r );
+    glMaterialfv( GL_FRONT, GL_SPECULAR, &s.r );
+    glMaterialf( GL_FRONT, GL_SHININESS, (1-roughness)*128 );
+}
 //-------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------
