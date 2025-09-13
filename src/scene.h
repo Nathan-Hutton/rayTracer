@@ -67,7 +67,7 @@ struct HitInfo
     void Init() { z=BIGFLOAT; node=nullptr; front=true; }
 };
 
-bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo);
+bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo, int hitSide=HIT_FRONT );
  
 //-------------------------------------------------------------------------------
  

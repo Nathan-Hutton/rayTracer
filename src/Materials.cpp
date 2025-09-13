@@ -1,12 +1,13 @@
 #include "Materials.h"
 #include "lights.h"
+#include "scene.h"
 #include <iostream>
 
 Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lights, int bounceCount) const
 {
     Color finalColor{};
 
-    const Vec3f normal{ hInfo.N.GetNormalized() };
+    Vec3f normal{ hInfo.N.GetNormalized() };
     const Vec3f viewDir{ -ray.dir.GetNormalized() };
     //return Color{ normal.x, normal.y, normal.z };
 
@@ -46,11 +47,29 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
     // Calculate refracted color
     if (bounceCount > 0 && refraction.Sum() > 0.0f)
     {
-        const float refractionRatio{ 1.0f / ior };
-        const Vec3f refractionDir{ -refractionRatio * viewDir - (sqrt(1.0f - pow(refractionRatio, 2) * pow(1 - (viewDir.Dot(normal)), 2)) - refractionRatio * (viewDir.Dot(normal))) * normal };
-        const Ray refractionRay{ hInfo.p + refractionDir * 0.0002f, refractionDir };
+        const float refractionRatio{ hInfo.front ? 1.0f / ior : ior };
+        const Vec3f N{ hInfo.front ? normal : -normal };
+
+        const float cosThetaRefractionSquared{ 1.0f - pow(refractionRatio, 2) * (1.0f - pow(viewDir.Dot(N), 2)) };
+
+        // Total intern refraction
+        if (cosThetaRefractionSquared < 0.0f)
+        { 
+            const Vec3f perfectReflectionDir{ normal * 2 * viewDir.Dot(normal) - viewDir };
+            const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
+            HitInfo reflectionHitInfo{};
+            if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo))
+                finalColor += reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * reflection;
+
+            return finalColor;
+        }
+
+        // Corrected formula
+        const Vec3f refractionDir{ -refractionRatio * viewDir - (sqrt(cosThetaRefractionSquared) - refractionRatio * (viewDir.Dot(N))) * N };
+
+        Ray refractionRay{ hInfo.p + refractionDir * 0.0222f, refractionDir };
         HitInfo refractionHitInfo{};
-        if (shootRay(lightsGlobalVars::rootNode, refractionRay, refractionHitInfo))
+        if (shootRay(lightsGlobalVars::rootNode, refractionRay, refractionHitInfo, HIT_FRONT_AND_BACK))
             finalColor += refractionHitInfo.node->GetMaterial()->Shade(refractionRay, refractionHitInfo, lights, bounceCount - 1) * refraction;
     }
 

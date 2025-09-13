@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 
 bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const
 {
@@ -15,13 +16,57 @@ bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
     const float discriminantSquareRoot{ sqrtf(discriminant) };
     const float inverse2A{ 1.0f / (2.0f * a) };
     const float t1{ (-b - discriminantSquareRoot) * inverse2A };
-    //const float t2{ (-b + discriminantSquareRoot) * inverse2A };
 
-    if (t1 < 0.0f) return false;
+    if (hitSide == HIT_FRONT)
+    {
+        if (t1 <= 0.0f)
+            return false;
 
-    hitInfo.z = t1;
-    hitInfo.p = localRay.p + localRay.dir * t1;
-    hitInfo.N = hitInfo.p;
-    return true;
-}
+        hitInfo.z = t1;
+        hitInfo.p = localRay.p + localRay.dir * t1;
+        hitInfo.N = hitInfo.p;
+        hitInfo.front = true;
+        return true;
+
+    }
+
+    const float t2{ (-b + discriminantSquareRoot) * inverse2A };
+    if (hitSide == HIT_BACK)
+    {
+        if (t1 > 0.0f || t2 < 0.0f)
+            return false;
+
+        hitInfo.z = t2;
+        hitInfo.p = localRay.p + localRay.dir * t2;
+        hitInfo.N = hitInfo.p;
+        hitInfo.front = false;
+        return true;
+    }
+
+
+    if (hitSide == HIT_FRONT_AND_BACK)
+    {
+        if (t1 < 0.0f && t2 < 0.0f)
+            return false;
+
+        if (t1 > 0.0f)
+        {
+            hitInfo.z = t1;
+            hitInfo.p = localRay.p + localRay.dir * t1;
+            hitInfo.N = hitInfo.p;
+            hitInfo.front = true;
+        }
+        else
+        {
+            hitInfo.z = t2;
+            hitInfo.p = localRay.p + localRay.dir * t2;
+            hitInfo.N = hitInfo.p;
+            hitInfo.front = false;
+        }
+
+        return true;
+    }
+
+    return false;
+} 
 

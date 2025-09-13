@@ -11,7 +11,7 @@ void ShowViewport( RenderScene *scene );
 
 Node* lightsGlobalVars::rootNode{ nullptr };
 
-bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
+bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo, int hitSide)
 {
     const Object* const obj{ node->GetNodeObj() };
     Ray localRay{ node->ToNodeCoords(ray) };
@@ -20,7 +20,7 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
     if (obj != nullptr)
     {
         HitInfo hitInfo{};
-        if (obj->IntersectRay(localRay, hitInfo))
+        if (obj->IntersectRay(localRay, hitInfo, hitSide))
         {
             bestHitInfo = hitInfo;
             bestHitInfo.node = node;
@@ -33,7 +33,7 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo)
     {
         HitInfo childHitInfo{};
         const Node* const childNode{ node->GetChild(i) };
-        if (shootRay(childNode, localRay, childHitInfo))
+        if (shootRay(childNode, localRay, childHitInfo, hitSide))
         {
             if (childHitInfo.z < bestHitInfo.z)
             {
@@ -79,7 +79,7 @@ int main()
             HitInfo hitInfo{};
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
             {
-                pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights, 5) };
+                pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights, 2) };
                 //pixels[j * scene.camera.imgWidth + i] = Color24{ 255, 255, 255 };
             }
 
