@@ -47,20 +47,21 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
     // Refractions
     if (bounceCount > 0 && refraction.Sum() > 0.0f)
     {
-        const float refractionRatio{ hInfo.front ? 1.0f / ior : ior };
         const Vec3f N{ hInfo.front ? normal : -normal };
+        const float viewDotN{ viewDir.Dot(N) };
 
-        const float cosThetaRefractionSquared{ 1.0f - pow(refractionRatio, 2) * (1.0f - pow(viewDir.Dot(N), 2)) };
+        const float refractionRatio{ hInfo.front ? 1.0f / ior : ior };
+        const float cosThetaRefractionSquared{ 1.0f - pow(refractionRatio, 2) * (1.0f - pow(viewDotN, 2)) };
 
         // Total internal reflection
         if (cosThetaRefractionSquared < 0.0f)
         { 
-            const Vec3f perfectReflectionDir{ N * 2 * viewDir.Dot(N) - viewDir };
+            const Vec3f perfectReflectionDir{ N * 2 * viewDotN - viewDir };
             const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
             HitInfo reflectionHitInfo{};
-            if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo))
+            if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo, HIT_FRONT_AND_BACK))
             {
-                Color colorFromReflection{ reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * reflection };
+                Color colorFromReflection{ reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * refraction };
                 const float absorptionRed{ exp(-absorption[0] * reflectionHitInfo.z) };
                 const float absorptionGreen{ exp(-absorption[1] * reflectionHitInfo.z) };
                 const float absorptionBlue{ exp(-absorption[2] * reflectionHitInfo.z) };
@@ -73,8 +74,19 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
             return finalColor;
         }
 
-        const Vec3f refractionDir{ -refractionRatio * viewDir - (sqrt(cosThetaRefractionSquared) - refractionRatio * (viewDir.Dot(N))) * N };
+        // Fresnel
+        const float fresnelRatio{ pow((1 - ior) / (1 + ior), 2) };
+        const float fresnelReflectionRatio{ fresnelRatio + (1 - fresnelRatio) * pow(1 - viewDotN, 5) };
+        const Vec3f perfectReflectionDir{ N * 2 * viewDotN - viewDir };
+        const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
+        HitInfo reflectionHitInfo{};
+        if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo, HIT_FRONT_AND_BACK))
+        {
+            const Color colorFromReflection{ reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * refraction };
+            finalColor += colorFromReflection * fresnelReflectionRatio;
+        }
 
+        const Vec3f refractionDir{ -refractionRatio * viewDir - (sqrt(cosThetaRefractionSquared) - refractionRatio * viewDotN) * N };
         Ray refractionRay{ hInfo.p + refractionDir * 0.0002f, refractionDir };
         HitInfo refractionHitInfo{};
         if (shootRay(lightsGlobalVars::rootNode, refractionRay, refractionHitInfo, HIT_FRONT_AND_BACK))
