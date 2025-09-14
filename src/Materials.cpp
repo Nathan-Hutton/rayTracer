@@ -31,10 +31,10 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
 
         const Vec3f halfway{ (viewDir + lightDir).GetNormalized() };
         const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-        finalColor += specular * pow(blinnTerm, glossiness) * lightIntensity * geometryTerm;
+        finalColor += specular * pow(blinnTerm, glossiness) * lightIntensity;// * geometryTerm;
     }
 
-    // Calulate reflected color
+    // Reflections
     if (bounceCount > 0 && reflection.Sum() > 0.0f)
     {
         const Vec3f perfectReflectionDir{ normal * 2 * viewDir.Dot(normal) - viewDir };
@@ -44,7 +44,7 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
             finalColor += reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * reflection;
     }
 
-    // Calculate refracted color
+    // Refractions
     if (bounceCount > 0 && refraction.Sum() > 0.0f)
     {
         const float refractionRatio{ hInfo.front ? 1.0f / ior : ior };
@@ -52,14 +52,23 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
 
         const float cosThetaRefractionSquared{ 1.0f - pow(refractionRatio, 2) * (1.0f - pow(viewDir.Dot(N), 2)) };
 
-        // Total intern refraction
+        // Total internal reflection
         if (cosThetaRefractionSquared < 0.0f)
         { 
-            const Vec3f perfectReflectionDir{ normal * 2 * viewDir.Dot(normal) - viewDir };
+            const Vec3f perfectReflectionDir{ N * 2 * viewDir.Dot(N) - viewDir };
             const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
             HitInfo reflectionHitInfo{};
             if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo))
-                finalColor += reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * reflection;
+            {
+                Color colorFromReflection{ reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * reflection };
+                const float absorptionRed{ exp(-absorption[0] * reflectionHitInfo.z) };
+                const float absorptionGreen{ exp(-absorption[1] * reflectionHitInfo.z) };
+                const float absorptionBlue{ exp(-absorption[2] * reflectionHitInfo.z) };
+                colorFromReflection[0] *= absorptionRed;
+                colorFromReflection[1] *= absorptionGreen;
+                colorFromReflection[2] *= absorptionBlue;
+                finalColor += colorFromReflection;
+            }
 
             return finalColor;
         }
