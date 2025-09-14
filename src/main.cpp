@@ -79,7 +79,7 @@ int main()
             HitInfo hitInfo{};
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
             {
-                pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights, 2) };
+                pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights, 10) };
                 //pixels[j * scene.camera.imgWidth + i] = Color24{ 255, 255, 255 };
             }
 

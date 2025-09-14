@@ -64,13 +64,24 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
             return finalColor;
         }
 
-        // Corrected formula
         const Vec3f refractionDir{ -refractionRatio * viewDir - (sqrt(cosThetaRefractionSquared) - refractionRatio * (viewDir.Dot(N))) * N };
 
-        Ray refractionRay{ hInfo.p + refractionDir * 0.0222f, refractionDir };
+        Ray refractionRay{ hInfo.p + refractionDir * 0.0002f, refractionDir };
         HitInfo refractionHitInfo{};
         if (shootRay(lightsGlobalVars::rootNode, refractionRay, refractionHitInfo, HIT_FRONT_AND_BACK))
-            finalColor += refractionHitInfo.node->GetMaterial()->Shade(refractionRay, refractionHitInfo, lights, bounceCount - 1) * refraction;
+        {
+            Color colorFromRefraction{ refractionHitInfo.node->GetMaterial()->Shade(refractionRay, refractionHitInfo, lights, bounceCount - 1) * refraction };
+            if (!refractionHitInfo.front)
+            {
+                const float absorptionRed{ exp(-absorption[0] * refractionHitInfo.z) };
+                const float absorptionGreen{ exp(-absorption[1] * refractionHitInfo.z) };
+                const float absorptionBlue{ exp(-absorption[2] * refractionHitInfo.z) };
+                colorFromRefraction[0] *= absorptionRed;
+                colorFromRefraction[1] *= absorptionGreen;
+                colorFromRefraction[2] *= absorptionBlue;
+            }
+            finalColor += colorFromRefraction;
+        }
     }
 
     return finalColor;
