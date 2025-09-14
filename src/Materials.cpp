@@ -76,14 +76,14 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
 
         // Fresnel
         const float fresnelRatio{ pow((1 - ior) / (1 + ior), 2) };
-        const float fresnelReflectionRatio{ fresnelRatio + (1 - fresnelRatio) * pow(1 - viewDotN, 5) };
+        const float fresnelReflectionAmount{ fresnelRatio + (1 - fresnelRatio) * pow(1 - viewDotN, 5) };
         const Vec3f perfectReflectionDir{ N * 2 * viewDotN - viewDir };
         const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
         HitInfo reflectionHitInfo{};
         if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo, HIT_FRONT_AND_BACK))
         {
             const Color colorFromReflection{ reflectionHitInfo.node->GetMaterial()->Shade(reflectionRay, reflectionHitInfo, lights, bounceCount - 1) * refraction };
-            finalColor += colorFromReflection * fresnelReflectionRatio;
+            finalColor += colorFromReflection * fresnelReflectionAmount;
         }
 
         const Vec3f refractionDir{ -refractionRatio * viewDir - (sqrt(cosThetaRefractionSquared) - refractionRatio * viewDotN) * N };
@@ -101,7 +101,7 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
                 colorFromRefraction[1] *= absorptionGreen;
                 colorFromRefraction[2] *= absorptionBlue;
             }
-            finalColor += colorFromRefraction;
+            finalColor += colorFromRefraction * (1.0f - fresnelReflectionAmount);
         }
     }
 
