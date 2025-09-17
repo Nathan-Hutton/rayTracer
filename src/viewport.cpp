@@ -2,8 +2,8 @@
 ///
 /// \file       viewport.cpp 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    2.2
-/// \date       August 27, 2025
+/// \version    5.0
+/// \date       September 13, 2025
 ///
 /// \brief Example source for CS 6620 - University of Utah.
 ///
@@ -153,7 +153,9 @@ void GlutReshape( int w, int h )
         glMatrixMode( GL_PROJECTION );
         glLoadIdentity();
         float r = (float) w / float (h);
-        gluPerspective( theScene->camera.fov, r, 0.02, 1000.0 );
+        Box const &box = theScene->rootNode.GetChildBoundBox();
+        float len = (box.pmax - box.pmin).Length();
+        gluPerspective( theScene->camera.fov, r, len/100000, len );
  
         glMatrixMode( GL_MODELVIEW );
         glLoadIdentity();
@@ -299,14 +301,13 @@ void GlutDisplay()
         break;
     case VIEWMODE_IMAGE:
         DrawImage( theScene->renderImage.GetPixels(), GL_UNSIGNED_BYTE, GL_RGB );
-        DrawRenderProgressBar();
         break;
     case VIEWMODE_Z:
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
-        if ( ! theScene->renderImage.GetZBufferImage() ) theScene->renderImage.ComputeZBufferImage();
+        theScene->renderImage.ComputeZBufferImage();
         DrawImage( theScene->renderImage.GetZBufferImage(), GL_UNSIGNED_BYTE, GL_LUMINANCE );
         break;
     }
+    DrawRenderProgressBar();
  
     glutSwapBuffers();
 }
@@ -443,6 +444,38 @@ void Sphere::ViewportDisplay( Material const *mtl ) const
         q = gluNewQuadric();
     }
     gluSphere(q,1,50,50);
+}
+void Plane::ViewportDisplay( Material const *mtl ) const
+{
+    const int resolution = 32;
+    glPushMatrix();
+    glScalef(2.0f/resolution,2.0f/resolution,2.0f/resolution);
+    glNormal3f(0,0,1);
+    glBegin(GL_QUADS);
+    for ( int y=0; y<resolution; y++ ) {
+        int yy = y - resolution/2;
+        for ( int x=0; x<resolution; x++ ) {
+            int xx = x - resolution/2;
+            glVertex3i( yy,   xx,   0 );
+            glVertex3i( yy+1, xx,   0 );
+            glVertex3i( yy+1, xx+1, 0 );
+            glVertex3i( yy,   xx+1, 0 );
+        }
+    }
+    glEnd();
+    glPopMatrix();
+}
+void TriObj::ViewportDisplay( Material const *mtl ) const
+{
+    glBegin(GL_TRIANGLES);
+    for ( unsigned int i=0; i<NF(); i++ ) {
+        for ( int j=0; j<3; j++ ) {
+            if ( HasTextureVertices() ) glTexCoord3fv( &VT( FT(i).v[j] ).x );
+            if ( HasNormals() ) glNormal3fv( &VN( FN(i).v[j] ).x );
+            glVertex3fv( &V( F(i).v[j] ).x );
+        }
+    }
+    glEnd();
 }
 void GenLight::SetViewportParam( int lightID, ColorA ambient, ColorA intensity, Vec4f pos ) const
 {

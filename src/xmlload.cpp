@@ -2,8 +2,8 @@
 ///
 /// \file       xmlload.cpp 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    4.0
-/// \date       August 25, 2025
+/// \version    5.0
+/// \date       September 13, 2025
 ///
 /// \brief Example source for CS 6620 - University of Utah.
 ///
@@ -29,6 +29,7 @@ int LoadScene( RenderScene &scene, char const *filename );
 //-------------------------------------------------------------------------------
  
 Sphere theSphere;
+Plane thePlane;
  
 //-------------------------------------------------------------------------------
  
@@ -37,7 +38,7 @@ using namespace tinyxml2;
 //-------------------------------------------------------------------------------
  
 void LoadScene    ( RenderScene    &scene,     XMLElement *element );
-void LoadNode     ( Node           &parent,    XMLElement *element, int level );
+void LoadNode     ( Node           &parent,    XMLElement *element, int level, ObjFileList &objList );
 void LoadTransform( Transformation &trans,     XMLElement *element, int level );
 void LoadMaterial ( MaterialList   &materials, XMLElement *element );
 void LoadLight    ( LightList      &lights,    XMLElement *element );
@@ -94,7 +95,10 @@ int LoadScene( RenderScene &scene, char const *filename )
     scene.rootNode.Init();
     scene.materials.DeleteAll();
     scene.lights.DeleteAll();
+    scene.objList.Clear();
     LoadScene( scene, xscene );
+ 
+    scene.rootNode.ComputeChildBoundBox();
  
     // Assign materials
     SetNodeMaterials( &scene.rootNode, scene.materials );
@@ -132,7 +136,7 @@ void LoadScene( RenderScene &scene, XMLElement *element )
 {
     for ( XMLElement *child = element->FirstChildElement(); child!=nullptr; child = child->NextSiblingElement() ) {
         if ( StrICmp( child->Value(), "object" ) ) {
-            LoadNode( scene.rootNode, child, 0 );
+            LoadNode( scene.rootNode, child, 0, scene.objList );
         } else if ( StrICmp( child->Value(), "material" ) ) {
             LoadMaterial( scene.materials, child );
         } else if ( StrICmp( child->Value(), "light" ) ) {
@@ -143,7 +147,7 @@ void LoadScene( RenderScene &scene, XMLElement *element )
  
 //-------------------------------------------------------------------------------
  
-void LoadNode( Node &parent, XMLElement *element, int level )
+void LoadNode( Node &parent, XMLElement *element, int level, ObjFileList &objList )
 {
     Node *node = new Node;
     parent.AppendChild(node);
@@ -169,6 +173,23 @@ void LoadNode( Node &parent, XMLElement *element, int level )
         if ( StrICmp(type,"sphere") ) {
             node->SetNodeObj( &theSphere );
             printf(" - Sphere");
+        } else if ( StrICmp(type,"plane") ) {
+            node->SetNodeObj( &thePlane );
+            printf(" - Plane");
+        } else if ( StrICmp(type,"obj") ) {
+            printf(" - OBJ");
+            Object *obj = objList.Find(name);
+            if ( obj == nullptr ) { // object is not on the list, so we should load it now
+                TriObj *tobj = new TriObj;
+                if ( ! tobj->Load( name ) ) {
+                    printf(" -- ERROR: Cannot load file \"%s.\"", name);
+                    delete tobj;
+                } else {
+                    objList.Append(tobj,name);  // add to the list
+                    obj = tobj;
+                }
+            }
+            node->SetNodeObj( obj );
         } else {
             printf(" - UNKNOWN TYPE");
         }
@@ -180,7 +201,7 @@ void LoadNode( Node &parent, XMLElement *element, int level )
  
     for ( XMLElement *child = element->FirstChildElement(); child!=nullptr; child = child->NextSiblingElement() ) {
         if ( StrICmp( child->Value(), "object" ) ) {
-            LoadNode( *node, child, level+1 );
+            LoadNode( *node, child, level+1, objList );
         }
     }
     LoadTransform( *node, element, level );
@@ -268,10 +289,10 @@ void LoadMaterial( MaterialList &materials, XMLElement *element )
     // type
     char const *type = element->Attribute("type");
     if ( type ) {
-        if ( StrICmp(type,"phong") ) {
-            //printf(" - Phong\n");
-            //mtl = loadPhongBlinn( new MtlPhong() );
-        } else if ( StrICmp(type,"blinn") ) {
+        //if ( StrICmp(type,"phong") ) {
+        //    printf(" - Phong\n");
+        //    mtl = loadPhongBlinn( new MtlPhong() ); }
+        if ( StrICmp(type,"blinn") ) {
             printf(" - Blinn\n");
             mtl = loadPhongBlinn( new MtlBlinn() );
         } else if ( StrICmp(type,"microfacet") ) {

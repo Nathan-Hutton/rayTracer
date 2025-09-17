@@ -34,8 +34,11 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
         finalColor += specular * pow(blinnTerm, glossiness) * lightIntensity;// * geometryTerm;
     }
 
+    if (bounceCount == 0)
+        return finalColor;
+
     // Reflections
-    if (bounceCount > 0 && reflection.Sum() > 0.0f)
+    if (reflection.Sum() > 0.0f)
     {
         const Vec3f perfectReflectionDir{ normal * 2 * viewDir.Dot(normal) - viewDir };
         const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
@@ -45,19 +48,20 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
     }
 
     // Refractions
-    if (bounceCount > 0 && refraction.Sum() > 0.0f)
+    if (refraction.Sum() > 0.0f)
     {
         const Vec3f N{ hInfo.front ? normal : -normal };
         const float viewDotN{ viewDir.Dot(N) };
 
-        const float refractionRatio{ hInfo.front ? 1.0f / ior : ior };
-        const float cosThetaRefractionSquared{ 1.0f - pow(refractionRatio, 2) * (1.0f - pow(viewDotN, 2)) };
+        const float eta{ hInfo.front ? 1.0f / ior : ior };
+        const float cosThetaRefractionSquared{ 1.0f - pow(eta, 2) * (1.0f - pow(viewDotN, 2)) };
+
+        const Vec3f perfectReflectionDir{ N * 2 * viewDotN - viewDir };
+        const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
 
         // Total internal reflection
         if (cosThetaRefractionSquared < 0.0f)
         { 
-            const Vec3f perfectReflectionDir{ N * 2 * viewDotN - viewDir };
-            const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
             HitInfo reflectionHitInfo{};
             if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo, HIT_FRONT_AND_BACK))
             {
@@ -77,8 +81,6 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
         // Fresnel
         const float fresnelRatio{ pow((1 - ior) / (1 + ior), 2) };
         const float fresnelReflectionAmount{ fresnelRatio + (1 - fresnelRatio) * pow(1 - viewDotN, 5) };
-        const Vec3f perfectReflectionDir{ N * 2 * viewDotN - viewDir };
-        const Ray reflectionRay{ hInfo.p + perfectReflectionDir * 0.0002f, perfectReflectionDir };
         HitInfo reflectionHitInfo{};
         if (shootRay(lightsGlobalVars::rootNode, reflectionRay, reflectionHitInfo, HIT_FRONT_AND_BACK))
         {
@@ -86,7 +88,7 @@ Color MtlBlinn::Shade(Ray const &ray, HitInfo const &hInfo, LightList const &lig
             finalColor += colorFromReflection * fresnelReflectionAmount;
         }
 
-        const Vec3f refractionDir{ -refractionRatio * viewDir - (sqrt(cosThetaRefractionSquared) - refractionRatio * viewDotN) * N };
+        const Vec3f refractionDir{ -eta * viewDir - (sqrt(cosThetaRefractionSquared) - eta * viewDotN) * N };
         Ray refractionRay{ hInfo.p + refractionDir * 0.0002f, refractionDir };
         HitInfo refractionHitInfo{};
         if (shootRay(lightsGlobalVars::rootNode, refractionRay, refractionHitInfo, HIT_FRONT_AND_BACK))
