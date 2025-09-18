@@ -28,9 +28,8 @@ protected:
     static float Shadow( Ray const &ray, float t_max=BIGFLOAT )
     {
         const Ray shadowRay{ ray.p + ray.dir * 0.0002f, ray.dir };
-        HitInfo hitInfo{};
 
-        if (shootRay(lightsGlobalVars::rootNode, shadowRay, hitInfo) && hitInfo.z < t_max)
+        if (shootShadowRay(lightsGlobalVars::rootNode, shadowRay, t_max))
             return 0.0f;
 
         return 1.0f;

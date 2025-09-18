@@ -70,3 +70,22 @@ bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
     return false;
 } 
 
+bool Sphere::IntersectShadowRay( Ray const &localRay, float t_max ) const
+{
+    const float a{ localRay.dir.Dot(localRay.dir) };
+    const float b{ 2 * localRay.dir.Dot(localRay.p) };
+    const float c{ localRay.p.Dot(localRay.p) - 1.0f };
+
+    const float discriminant{ b*b - 4*a*c };
+    if (discriminant < 0.0f) return false;
+
+    const float discriminantSquareRoot{ sqrtf(discriminant) };
+    const float inverse2A{ 1.0f / (2.0f * a) };
+
+    const float t1{ (-b - discriminantSquareRoot) * inverse2A };
+    const float t2{ (-b + discriminantSquareRoot) * inverse2A };
+
+    if (t1 >= 0.0f) return t1 < t_max;
+    return t2 >= 0.0f && t2 < t_max;
+}
+

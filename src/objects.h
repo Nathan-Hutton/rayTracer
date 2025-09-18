@@ -26,6 +26,7 @@ class Sphere : public Object
 {
 public:
     bool IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT ) const override;
+    bool IntersectShadowRay( Ray const &ray, float t_max=BIGFLOAT ) const override;
     Box  GetBoundBox() const override { return Box(-1,-1,-1,1,1,1); }
     void ViewportDisplay( Material const *mtl ) const override;
 };
@@ -36,6 +37,7 @@ class Plane : public Object
 {
 public:
     bool IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT ) const override;
+    bool IntersectShadowRay( Ray const &ray, float t_max=BIGFLOAT ) const override;
     Box  GetBoundBox() const override { return Box(-1,-1,0,1,1,0); }
     void ViewportDisplay( const Material *mtl ) const override;
 };
@@ -48,6 +50,7 @@ class TriObj : public Object, public TriMesh
 {
 public:
     bool IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT ) const override;
+    bool IntersectShadowRay( Ray const &ray, float t_max=BIGFLOAT ) const override;
     Box  GetBoundBox() const override { return Box(GetBoundMin(),GetBoundMax()); }
     void ViewportDisplay( const Material *mtl ) const override;
  

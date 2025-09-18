@@ -68,6 +68,7 @@ struct HitInfo
 };
 
 bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo, int hitSide=HIT_FRONT );
+bool shootShadowRay(const Node* const node, const Ray& ray, float t_max=BIGFLOAT);
  
 //-------------------------------------------------------------------------------
  
@@ -236,6 +237,7 @@ class Object
 {
 public:
     virtual bool IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT ) const=0;
+    virtual bool IntersectShadowRay( Ray const &ray, float t_max=BIGFLOAT) const=0;
     virtual Box  GetBoundBox() const=0;
     virtual void ViewportDisplay( Material const *mtl ) const {}    // used for OpenGL display
 };

@@ -47,6 +47,25 @@ bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo, int 
     return hitObject;
 }
 
+bool shootShadowRay(const Node* const node, const Ray& ray, float t_max)
+{
+    const Object* const obj{ node->GetNodeObj() };
+    Ray localRay{ node->ToNodeCoords(ray) };
+
+    if (obj != nullptr)
+        if (obj->IntersectShadowRay(localRay, t_max))
+            return true;
+
+    for (int i{ 0 }; i < node->GetNumChild(); ++i)
+    {
+        const Node* const childNode{ node->GetChild(i) };
+        if (shootShadowRay(childNode, localRay, t_max)) 
+            return true;
+    }
+
+    return false;
+}
+
 int main()
 {
     RenderScene scene{};

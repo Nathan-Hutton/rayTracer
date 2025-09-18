@@ -70,3 +70,8 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
     return false;
 } 
 
+bool TriObj::IntersectShadowRay( Ray const &localRay, float t_max ) const
+{
+    return true;
+}
+
