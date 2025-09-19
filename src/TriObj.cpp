@@ -4,18 +4,19 @@
 #include <cmath>
 #include <algorithm>
 
+// Möller-Trumbore
 bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const
 {
     float closestT{ BIGFLOAT };
     Vec3f closestX{};
+    float closestDet{};
+    float closestU{};
+    float closestV{};
     size_t closestFaceID{};
-    float doubleArea0{};
-    float doubleArea1{};
-    float doubleArea2{};
-    float doubleAreaTriangle{};
-
-    bool hit{ false };
     bool hitFront{ false };
+
+    constexpr float epsilon{ 1e-6 };
+    bool hit{ false };
     for (size_t i{ 0 }; i < nf; ++i)
     {
         const TriFace& vertFace{ f[i] };
@@ -26,87 +27,53 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
 
         const Vec3f e1{ v1 - v0 };
         const Vec3f e2{ v2 - v0 };
-        const Vec3f normal{ e1 ^ e2 };
 
-        const float normalDotRayDir{ normal % localRay.dir };
-        const bool localHitFront{ normalDotRayDir <= 0.0f };
-        if (hitSide == HIT_FRONT && !localHitFront) continue;
-        if (hitSide == HIT_BACK && localHitFront) continue;
+        const Vec3f rayCrossE2{ localRay.dir ^ e2 };
+        const float det{ e1 % rayCrossE2 };
 
-        const float h{ -v0 % normal };
+        if (det > -epsilon && det < epsilon) continue;
 
-        const float t{ -(localRay.p % normal + h) / normalDotRayDir };
-        if (t < 0.0f || t > closestT) continue;
-        const Vec3f x{ localRay.p + localRay.dir * t };
+        if (hitSide == HIT_FRONT && det < 0.0f) continue;
+        if (hitSide == HIT_BACK && det > 0.0f) continue;
 
-        const float normalXLen{ abs(normal.x) };
-        const float normalYLen{ abs(normal.y) };
-        const float normalZLen{ abs(normal.z) };
+        const float invDet{ 1.0f / det };
+        const Vec3f s{ localRay.p - v0 };
 
-        Vec2f v0_2d;
-        Vec2f v1_2d;
-        Vec2f v2_2d;
-        Vec2f x_2d;
+        const float u{ invDet * (s % rayCrossE2) };
+        if (u < 0.0f || u > 1.0f) continue;
 
-        if (normalXLen > normalYLen && normalXLen > normalZLen)
-        {
-            v0_2d = Vec2f{ v0.y, v0.z };
-            v1_2d = Vec2f{ v1.y, v1.z };
-            v2_2d = Vec2f{ v2.y, v2.z };
-            x_2d = Vec2f{ x.y, x.z };
-        }
-        else if (normalYLen > normalXLen && normalYLen > normalZLen)
-        {
-            v0_2d = Vec2f{ v0.x, v0.z };
-            v1_2d = Vec2f{ v1.x, v1.z };
-            v2_2d = Vec2f{ v2.x, v2.z };
-            x_2d = Vec2f{ x.x, x.z };
-        }
-        else
-        {
-            v0_2d = Vec2f{ v0.x, v0.y };
-            v1_2d = Vec2f{ v1.x, v1.y };
-            v2_2d = Vec2f{ v2.x, v2.y };
-            x_2d = Vec2f{ x.x, x.y };
-        }
+        const Vec3f sCrossE1{ s ^ e1 };
+        const float v{ invDet * (localRay.dir % sCrossE1) };
+        if (v < 0.0f || u + v > 1.0f) continue;
 
-        const float tempDoubleArea0{ (v2_2d - v1_2d) ^ (x_2d - v1_2d) };
-        const float tempDoubleArea1{ (v0_2d - v2_2d) ^ (x_2d - v2_2d) };
-        const float tempDoubleArea2{ (v1_2d - v0_2d) ^ (x_2d - v0_2d) };
-        
-        // Check if the signs are inconsistent. If so, the point is outside. This is because 2D projection can ruin winding order
-        if (!((tempDoubleArea0 >= 0 && tempDoubleArea1 >= 0 && tempDoubleArea2 >= 0) || (tempDoubleArea0 <= 0 && tempDoubleArea1 <= 0 && tempDoubleArea2 <= 0)))
-            continue;
+        const float t{ invDet * (e2 % sCrossE1) };
+        if (t <= epsilon || t > closestT) continue;
 
-        doubleAreaTriangle = (v1_2d - v0_2d) ^ (v2_2d - v0_2d);
-        doubleArea0 = tempDoubleArea0;
-        doubleArea1 = tempDoubleArea1;
-        doubleArea2 = tempDoubleArea2;
-        closestT = t;
-        closestX = x;
-        closestFaceID = i;
-        hitFront = localHitFront;
         hit = true;
+        closestT = t;
+        closestX = localRay.p + localRay.dir * t;
+        closestDet = det;
+        closestU = u;
+        closestV = v;
+        closestFaceID = i;
     }
 
     if (!hit) return false;
-
-    const float b0{ doubleArea0 / doubleAreaTriangle };
-    const float b1{ doubleArea1 / doubleAreaTriangle };
-    const float b2{ 1.0f - (b0 + b1) };
     
     const TriFace& normFace{ fn[closestFaceID] };
 
     hitInfo.z = closestT;
     hitInfo.p = closestX;
-    hitInfo.N = (b0 * vn[normFace.v[0]] + b1 * vn[normFace.v[1]] + b2 * vn[normFace.v[2]]).GetNormalized();
-    hitInfo.front = hitFront;
+    hitInfo.front = closestDet > 0.0f;
+
+    hitInfo.N = ((1.0f - closestU - closestV) * vn[normFace.v[0]] + closestU * vn[normFace.v[1]] + closestV * vn[normFace.v[2]]).GetNormalized();
 
     return true;
 } 
 
 bool TriObj::IntersectShadowRay( Ray const &localRay, float t_max ) const
 {
+    constexpr float epsilon{ 1e-6 };
     for (size_t i{ 0 }; i < nf; ++i)
     {
         const TriFace& vertFace{ f[i] };
@@ -117,52 +84,24 @@ bool TriObj::IntersectShadowRay( Ray const &localRay, float t_max ) const
 
         const Vec3f e1{ v1 - v0 };
         const Vec3f e2{ v2 - v0 };
-        const Vec3f normal{ e1 ^ e2 };
 
-        const float h{ -v0 % normal };
+        const Vec3f rayCrossE2{ localRay.dir ^ e2 };
+        const float det{ e1 % rayCrossE2 };
 
-        const float t{ -(localRay.p % normal + h) / (normal % localRay.dir) };
-        if (t < 0.0f || t > t_max) continue;
-        const Vec3f x{ localRay.p + localRay.dir * t };
+        if (det > -epsilon && det < epsilon) continue;
 
-        const float normalXLen{ abs(normal.x) };
-        const float normalYLen{ abs(normal.y) };
-        const float normalZLen{ abs(normal.z) };
+        const float invDet{ 1.0f / det };
+        const Vec3f s{ localRay.p - v0 };
 
-        Vec2f v0_2d;
-        Vec2f v1_2d;
-        Vec2f v2_2d;
-        Vec2f x_2d;
+        const float u{ invDet * (s % rayCrossE2) };
+        if (u < 0.0f || u > 1.0f) continue;
 
-        if (normalXLen > normalYLen && normalXLen > normalZLen)
-        {
-            v0_2d = Vec2f{ v0.y, v0.z };
-            v1_2d = Vec2f{ v1.y, v1.z };
-            v2_2d = Vec2f{ v2.y, v2.z };
-            x_2d = Vec2f{ x.y, x.z };
-        }
-        else if (normalYLen > normalXLen && normalYLen > normalZLen)
-        {
-            v0_2d = Vec2f{ v0.x, v0.z };
-            v1_2d = Vec2f{ v1.x, v1.z };
-            v2_2d = Vec2f{ v2.x, v2.z };
-            x_2d = Vec2f{ x.x, x.z };
-        }
-        else
-        {
-            v0_2d = Vec2f{ v0.x, v0.y };
-            v1_2d = Vec2f{ v1.x, v1.y };
-            v2_2d = Vec2f{ v2.x, v2.y };
-            x_2d = Vec2f{ x.x, x.y };
-        }
+        const Vec3f sCrossE1{ s ^ e1 };
+        const float v{ invDet * (localRay.dir % sCrossE1) };
+        if (v < 0.0f || u + v > 1.0f) continue;
 
-        const float doubleArea0 = (v2_2d - v1_2d) ^ (x_2d - v1_2d);
-        const float doubleArea1 = (v0_2d - v2_2d) ^ (x_2d - v2_2d);
-        const float doubleArea2 = (v1_2d - v0_2d) ^ (x_2d - v0_2d);
-
-        // Check if the signs are inconsistent. If so, the point is outside. This is because 2D projection can ruin winding order
-        if (!((doubleArea0 >= 0 && doubleArea1 >= 0 && doubleArea2 >= 0) || (doubleArea0 <= 0 && doubleArea1 <= 0 && doubleArea2 <= 0)))
-            continue;
+        const float t{ invDet * (e2 % sCrossE1) };
+        if (t <= epsilon || t > t_max) continue;
 
         return true;
     }

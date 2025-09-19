@@ -96,13 +96,9 @@ int main()
             const float y{ imagePlaneHeight * 0.5f - pixelSize * (static_cast<float>(j) + 0.5f) };
             const Ray worldRay{ scene.camera.pos, (cameraToWorld * Vec3f{ x, y, -1.0f }) };
 
-
             HitInfo hitInfo{};
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
-            {
                 pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights, 10) };
-                //pixels[j * scene.camera.imgWidth + i] = Color24{ 255, 255, 255 };
-            }
 
             depthValues[j * scene.camera.imgWidth + i] = hitInfo.z;
         }
