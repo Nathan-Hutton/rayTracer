@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <chrono>
 
 int LoadScene( RenderScene &scene, char const *filename );
 void ShowViewport( RenderScene *scene );
@@ -86,6 +87,7 @@ int main()
 
     Color24* pixels{ scene.renderImage.GetPixels() };
     float* depthValues{ scene.renderImage.GetZBuffer() };
+    const auto start{ std::chrono::high_resolution_clock::now() };
     for (int i{ 0 }; i < scene.camera.imgWidth; ++i)
     {
         for (int j{ 0 }; j < scene.camera.imgHeight; ++j)
@@ -105,6 +107,10 @@ int main()
             depthValues[j * scene.camera.imgWidth + i] = hitInfo.z;
         }
     }
+    const auto end{ std::chrono::high_resolution_clock::now() };
+    const auto durationMilli{ std::chrono::duration_cast<std::chrono::milliseconds>(end - start) };
+    const auto durationSeconds{ std::chrono::duration_cast<std::chrono::seconds>(end - start) };
+    std::cout << "\nTime: " << durationSeconds << " : " << durationMilli % 1000 << '\n';
 
     scene.renderImage.ComputeZBufferImage();
     scene.renderImage.SaveZImage("../zbuffer.png");

@@ -156,14 +156,14 @@ void LoadNode( Node &parent, XMLElement *element, int level, ObjFileList &objLis
     char const *name = element->Attribute("name");
     node->SetName(name);
     PrintIndent(level);
-    printf("object [");
-    if ( name ) printf("%s",name);
-    printf("]");
+    //printf("object [");
+    //if ( name ) printf("%s",name);
+    //printf("]");
  
     // material
     char const *mtlName = element->Attribute("material");
     if ( mtlName ) {
-        printf(" <%s>", mtlName);
+        //printf(" <%s>", mtlName);
         node->SetMaterial( (Material*)mtlName ); // temporarily set the material pointer to a string of the material name
     }
  
@@ -172,17 +172,17 @@ void LoadNode( Node &parent, XMLElement *element, int level, ObjFileList &objLis
     if ( type ) {
         if ( StrICmp(type,"sphere") ) {
             node->SetNodeObj( &theSphere );
-            printf(" - Sphere");
+            //printf(" - Sphere");
         } else if ( StrICmp(type,"plane") ) {
             node->SetNodeObj( &thePlane );
-            printf(" - Plane");
+            //printf(" - Plane");
         } else if ( StrICmp(type,"obj") ) {
-            printf(" - OBJ");
+            //printf(" - OBJ");
             Object *obj = objList.Find(name);
             if ( obj == nullptr ) { // object is not on the list, so we should load it now
                 TriObj *tobj = new TriObj;
                 if ( ! tobj->Load( name ) ) {
-                    printf(" -- ERROR: Cannot load file \"%s.\"", name);
+                    //printf(" -- ERROR: Cannot load file \"%s.\"", name);
                     delete tobj;
                 } else {
                     objList.Append(tobj,name);  // add to the list
@@ -191,12 +191,12 @@ void LoadNode( Node &parent, XMLElement *element, int level, ObjFileList &objLis
             }
             node->SetNodeObj( obj );
         } else {
-            printf(" - UNKNOWN TYPE");
+            //printf(" - UNKNOWN TYPE");
         }
     }
  
  
-    printf("\n");
+    //printf("\n");
  
  
     for ( XMLElement *child = element->FirstChildElement(); child!=nullptr; child = child->NextSiblingElement() ) {
@@ -218,7 +218,7 @@ void LoadTransform( Transformation &trans, XMLElement *element, int level )
             ReadVector( child, s );
             trans.Scale(s.x,s.y,s.z);
             PrintIndent(level);
-            printf("   scale %f %f %f\n",s.x,s.y,s.z);
+            //printf("   scale %f %f %f\n",s.x,s.y,s.z);
         } else if ( StrICmp( child->Value(), "rotate" ) ) {
             Vec3f s(0,0,0);
             ReadVector( child, s );
@@ -227,13 +227,13 @@ void LoadTransform( Transformation &trans, XMLElement *element, int level )
             ReadFloat(child,a,"angle");
             trans.Rotate(s,a);
             PrintIndent(level);
-            printf("   rotate %f degrees around %f %f %f\n", a, s.x, s.y, s.z);
+            //printf("   rotate %f degrees around %f %f %f\n", a, s.x, s.y, s.z);
         } else if ( StrICmp( child->Value(), "translate" ) ) {
             Vec3f t(0,0,0);
             ReadVector(child,t);
             trans.Translate(t);
             PrintIndent(level);
-            printf("   translate %f %f %f\n",t.x,t.y,t.z);
+            //printf("   translate %f %f %f\n",t.x,t.y,t.z);
         }
     }
 }
@@ -246,9 +246,9 @@ void LoadMaterial( MaterialList &materials, XMLElement *element )
  
     // name
     char const *name = element->Attribute("name");
-    printf("Material [");
-    if ( name ) printf("%s",name);
-    printf("]");
+    //printf("Material [");
+    //if ( name ) printf("%s",name);
+    //printf("]");
  
     auto loadPhongBlinn = [&element]( MtlBasePhongBlinn *m )
     {
@@ -258,29 +258,29 @@ void LoadMaterial( MaterialList &materials, XMLElement *element )
             if ( StrICmp( child->Value(), "diffuse" ) ) {
                 ReadColor( child, c );
                 m->SetDiffuse(c);
-                printf("   diffuse %f %f %f\n",c.r,c.g,c.b);
+                //printf("   diffuse %f %f %f\n",c.r,c.g,c.b);
             } else if ( StrICmp( child->Value(), "specular" ) ) {
                 ReadColor( child, c );
                 m->SetSpecular(c);
-                printf("   specular %f %f %f\n",c.r,c.g,c.b);
+                //printf("   specular %f %f %f\n",c.r,c.g,c.b);
             } else if ( StrICmp( child->Value(), "glossiness" ) ) {
                 ReadFloat( child, f );
                 m->SetGlossiness(f);
-                printf("   glossiness %f\n",f);
+                //printf("   glossiness %f\n",f);
             } else if ( StrICmp( child->Value(), "reflection" ) ) {
                 ReadColor( child, c );
                 m->SetReflection(c);
-                printf("   reflection %f %f %f\n",c.r,c.g,c.b);
+                //printf("   reflection %f %f %f\n",c.r,c.g,c.b);
             } else if ( StrICmp( child->Value(), "refraction" ) ) {
                 ReadColor( child, c );
                 m->SetRefraction(c);
                 ReadFloat( child, f, "index" );
                 m->SetIOR(f);
-                printf("   refraction %f %f %f (ior: %f)\n",c.r,c.g,c.b,f);
+                //printf("   refraction %f %f %f (ior: %f)\n",c.r,c.g,c.b,f);
             } else if ( StrICmp( child->Value(), "absorption" ) ) {
                 ReadColor( child, c );
                 m->SetAbsorption(c);
-                printf("   absorption %f %f %f\n",c.r,c.g,c.b);
+                //printf("   absorption %f %f %f\n",c.r,c.g,c.b);
             }
         }
         return m;
@@ -293,10 +293,10 @@ void LoadMaterial( MaterialList &materials, XMLElement *element )
         //    printf(" - Phong\n");
         //    mtl = loadPhongBlinn( new MtlPhong() ); }
         if ( StrICmp(type,"blinn") ) {
-            printf(" - Blinn\n");
+            //printf(" - Blinn\n");
             mtl = loadPhongBlinn( new MtlBlinn() );
         } else if ( StrICmp(type,"microfacet") ) {
-            printf(" - Microfacet\n");
+            //printf(" - Microfacet\n");
             MtlMicrofacet *m = new MtlMicrofacet();
             mtl = m;
             for ( XMLElement *child = element->FirstChildElement(); child!=nullptr; child = child->NextSiblingElement() ) {
@@ -305,31 +305,31 @@ void LoadMaterial( MaterialList &materials, XMLElement *element )
                 if ( StrICmp( child->Value(), "color" ) ) {
                     ReadColor( child, c );
                     m->SetBaseColor(c);
-                    printf("   color %f %f %f\n",c.r,c.g,c.b);
+                    //printf("   color %f %f %f\n",c.r,c.g,c.b);
                 } else if ( StrICmp( child->Value(), "roughness" ) ) {
                     ReadFloat( child, f );
                     m->SetRoughness(f);
-                    printf("   roughness %f\n",f);
+                    //printf("   roughness %f\n",f);
                 } else if ( StrICmp( child->Value(), "metallic" ) ) {
                     ReadFloat( child, f );
                     m->SetMetallic(f);
-                    printf("   metallic %f\n",f);
+                    //printf("   metallic %f\n",f);
                 } else if ( StrICmp( child->Value(), "ior" ) ) {
                     ReadFloat( child, f );
                     m->SetIOR(f);
-                    printf("   ior %f\n",f);
+                    //printf("   ior %f\n",f);
                 } else if ( StrICmp( child->Value(), "transmittance" ) ) {
                     ReadColor( child, c );
                     m->SetTransmittance(c);
-                    printf("   transmittance %f %f %f\n",c.r,c.g,c.b);
+                    //printf("   transmittance %f %f %f\n",c.r,c.g,c.b);
                 } else if ( StrICmp( child->Value(), "absorption" ) ) {
                     ReadColor( child, c );
                     m->SetAbsorption(c);
-                    printf("   absorption %f %f %f\n",c.r,c.g,c.b);
+                    //printf("   absorption %f %f %f\n",c.r,c.g,c.b);
                 }
             }
         } else {
-            printf(" - UNKNOWN\n");
+            //printf(" - UNKNOWN\n");
         }
     }
  
@@ -347,15 +347,15 @@ void LoadLight( LightList &lights, XMLElement *element )
  
     // name
     char const *name = element->Attribute("name");
-    printf("Light [");
-    if ( name ) printf("%s",name);
-    printf("]");
+    //printf("Light [");
+    //if ( name ) printf("%s",name);
+    //printf("]");
  
     // type
     char const *type = element->Attribute("type");
     if ( type ) {
         if ( StrICmp(type,"ambient") ) {
-            printf(" - Ambient\n");
+            //printf(" - Ambient\n");
             AmbientLight *l = new AmbientLight();
             light = l;
             for ( XMLElement *child = element->FirstChildElement(); child!=nullptr; child = child->NextSiblingElement() ) {
@@ -363,11 +363,11 @@ void LoadLight( LightList &lights, XMLElement *element )
                     Color c(1,1,1);
                     ReadColor( child, c );
                     l->SetIntensity(c);
-                    printf("   intensity %f %f %f\n",c.r,c.g,c.b);
+                    //printf("   intensity %f %f %f\n",c.r,c.g,c.b);
                 }
             }
         } else if ( StrICmp(type,"direct") ) {
-            printf(" - Direct\n");
+            //printf(" - Direct\n");
             DirectLight *l = new DirectLight();
             light = l;
             for ( XMLElement *child = element->FirstChildElement(); child!=nullptr; child = child->NextSiblingElement() ) {
@@ -375,16 +375,16 @@ void LoadLight( LightList &lights, XMLElement *element )
                     Color c(1,1,1);
                     ReadColor( child, c );
                     l->SetIntensity(c);
-                    printf("   intensity %f %f %f\n",c.r,c.g,c.b);
+                    //printf("   intensity %f %f %f\n",c.r,c.g,c.b);
                 } else if ( StrICmp( child->Value(), "direction" ) ) {
                     Vec3f v(1,1,1);
                     ReadVector( child, v );
                     l->SetDirection(v);
-                    printf("   direction %f %f %f\n",v.x,v.y,v.z);
+                    //printf("   direction %f %f %f\n",v.x,v.y,v.z);
                 }
             }
         } else if ( StrICmp(type,"point") ) {
-            printf(" - Point\n");
+            //printf(" - Point\n");
             PointLight *l = new PointLight();
             light = l;
             for ( XMLElement *child = element->FirstChildElement(); child!=nullptr; child = child->NextSiblingElement() ) {
@@ -392,12 +392,12 @@ void LoadLight( LightList &lights, XMLElement *element )
                     Color c(1,1,1);
                     ReadColor( child, c );
                     l->SetIntensity(c);
-                    printf("   intensity %f %f %f\n",c.r,c.g,c.b);
+                    //printf("   intensity %f %f %f\n",c.r,c.g,c.b);
                 } else if ( StrICmp( child->Value(), "position" ) ) {
                     Vec3f v(0,0,0);
                     ReadVector( child, v );
                     l->SetPosition(v);
-                    printf("   position %f %f %f\n",v.x,v.y,v.z);
+                    //printf("   position %f %f %f\n",v.x,v.y,v.z);
                 }
             }
         } else {

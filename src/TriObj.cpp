@@ -70,14 +70,18 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
             x_2d = Vec2f{ x.x, x.y };
         }
 
-        doubleArea0 = (v2_2d - v1_2d) ^ (x_2d - v1_2d);
-        if (doubleArea0 < 0.0f) continue;
-        doubleArea1 = (v0_2d - v2_2d) ^ (x_2d - v2_2d);
-        if (doubleArea1 < 0.0f) continue;
-        doubleArea2 = (v1_2d - v0_2d) ^ (x_2d - v0_2d);
-        if (doubleArea2 < 0.0f) continue;
-        doubleAreaTriangle = (v1_2d - v0_2d) ^ (v2_2d - v0_2d);
+        const float tempDoubleArea0{ (v2_2d - v1_2d) ^ (x_2d - v1_2d) };
+        const float tempDoubleArea1{ (v0_2d - v2_2d) ^ (x_2d - v2_2d) };
+        const float tempDoubleArea2{ (v1_2d - v0_2d) ^ (x_2d - v0_2d) };
+        
+        // Check if the signs are inconsistent. If so, the point is outside. This is because 2D projection can ruin winding order
+        if (!((tempDoubleArea0 >= 0 && tempDoubleArea1 >= 0 && tempDoubleArea2 >= 0) || (tempDoubleArea0 <= 0 && tempDoubleArea1 <= 0 && tempDoubleArea2 <= 0)))
+            continue;
 
+        doubleAreaTriangle = (v1_2d - v0_2d) ^ (v2_2d - v0_2d);
+        doubleArea0 = tempDoubleArea0;
+        doubleArea1 = tempDoubleArea1;
+        doubleArea2 = tempDoubleArea2;
         closestT = t;
         closestX = x;
         closestFaceID = i;
@@ -118,7 +122,7 @@ bool TriObj::IntersectShadowRay( Ray const &localRay, float t_max ) const
         const float h{ -v0 % normal };
 
         const float t{ -(localRay.p % normal + h) / (normal % localRay.dir) };
-        if (t < 0.0f && t < t_max) continue;
+        if (t < 0.0f || t > t_max) continue;
         const Vec3f x{ localRay.p + localRay.dir * t };
 
         const float normalXLen{ abs(normal.x) };
@@ -152,9 +156,13 @@ bool TriObj::IntersectShadowRay( Ray const &localRay, float t_max ) const
             x_2d = Vec2f{ x.x, x.y };
         }
 
-        if (((v2_2d - v1_2d) ^ (x_2d - v1_2d)) < 0.0f) continue;
-        if (((v0_2d - v2_2d) ^ (x_2d - v2_2d)) < 0.0f) continue;
-        if (((v1_2d - v0_2d) ^ (x_2d - v0_2d)) < 0.0f) continue;
+        const float doubleArea0 = (v2_2d - v1_2d) ^ (x_2d - v1_2d);
+        const float doubleArea1 = (v0_2d - v2_2d) ^ (x_2d - v2_2d);
+        const float doubleArea2 = (v1_2d - v0_2d) ^ (x_2d - v0_2d);
+
+        // Check if the signs are inconsistent. If so, the point is outside. This is because 2D projection can ruin winding order
+        if (!((doubleArea0 >= 0 && doubleArea1 >= 0 && doubleArea2 >= 0) || (doubleArea0 <= 0 && doubleArea1 <= 0 && doubleArea2 <= 0)))
+            continue;
 
         return true;
     }
