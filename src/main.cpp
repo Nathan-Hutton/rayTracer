@@ -4,7 +4,7 @@
 #include "cyCore/cyMatrix.h"
 
 #include <iostream>
-#include <cmath>
+#include <atomic>
 #include <chrono>
 
 int LoadScene( RenderScene &scene, char const *filename );
@@ -73,34 +73,40 @@ int main()
     LoadScene(scene, "../assets/scene.xml");
     lightsGlobalVars::rootNode = &scene.rootNode;
 
+    const int tileSize{ 16 };
+    const int numTilesX{ (scene.camera.imgWidth + tileSize - 1) / tileSize };
+    const int numTilesY{ (scene.camera.imgHeight + tileSize - 1) / tileSize };
+    const int totalNumTiles{ numTilesX * numTilesY };
+    std::atomic<int> tileCounter{ 0 };
+
     const Vec3 camZ{ -scene.camera.dir.GetNormalized() };
     const Vec3f camX{ scene.camera.up.Cross(camZ).GetNormalized() };
     const Vec3f camY{ camZ.Cross(camX) };
     const Matrix3f cameraToWorld{ camX, camY, camZ };
 
     constexpr float Pi = 3.14159265358979323846f;
-    const float imagePlaneHeight{ 2 * tanf((static_cast<float>(scene.camera.fov) * Pi / 180.0f) / 2.0f) };
+    const float imagePlaneHalfHeight{ tanf((static_cast<float>(scene.camera.fov) * Pi / 180.0f) / 2.0f) };
 
     const float aspectRatio{ static_cast<float>(scene.camera.imgWidth) / static_cast<float>(scene.camera.imgHeight) };
-    const float imagePlaneWidth{ aspectRatio * imagePlaneHeight };
-    const float pixelSize{ imagePlaneWidth / static_cast<float>(scene.camera.imgWidth) };
+    const float imagePlaneHalfWidth{ aspectRatio * imagePlaneHalfHeight };
+    const float pixelSize{ (imagePlaneHalfWidth * 2.0f) / static_cast<float>(scene.camera.imgWidth) };
 
     Color24* pixels{ scene.renderImage.GetPixels() };
     float* depthValues{ scene.renderImage.GetZBuffer() };
     const auto start{ std::chrono::high_resolution_clock::now() };
-    for (int i{ 0 }; i < scene.camera.imgWidth; ++i)
+    for (int j{ 0 }; j < scene.camera.imgWidth; ++j)
     {
-        for (int j{ 0 }; j < scene.camera.imgHeight; ++j)
+        for (int i{ 0 }; i < scene.camera.imgHeight; ++i)
         {
-            const float x{ -imagePlaneWidth * 0.5f + pixelSize * (static_cast<float>(i) + 0.5f) };
-            const float y{ imagePlaneHeight * 0.5f - pixelSize * (static_cast<float>(j) + 0.5f) };
+            const float x{ -imagePlaneHalfWidth + pixelSize * (static_cast<float>(j) + 0.5f) };
+            const float y{ imagePlaneHalfHeight - pixelSize * (static_cast<float>(i) + 0.5f) };
             const Ray worldRay{ scene.camera.pos, (cameraToWorld * Vec3f{ x, y, -1.0f }) };
 
             HitInfo hitInfo{};
             if (shootRay(&scene.rootNode, worldRay, hitInfo))
-                pixels[j * scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights, 10) };
+                pixels[i * scene.camera.imgWidth + j] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, scene.lights, 5) };
 
-            depthValues[j * scene.camera.imgWidth + i] = hitInfo.z;
+            depthValues[i * scene.camera.imgWidth + j] = hitInfo.z;
         }
     }
     const auto end{ std::chrono::high_resolution_clock::now() };

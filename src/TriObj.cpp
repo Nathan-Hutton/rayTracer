@@ -13,7 +13,6 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
     float closestU{};
     float closestV{};
     size_t closestFaceID{};
-    bool hitFront{ false };
 
     constexpr float epsilon{ 1e-6 };
     bool hit{ false };
