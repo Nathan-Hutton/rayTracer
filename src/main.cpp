@@ -69,7 +69,7 @@ bool shootShadowRay(const Node* const node, const Ray& ray, float t_max)
 int main()
 {
     RenderScene scene{};
-    LoadScene(scene, "../assets/simpleScene.xml");
+    LoadScene(scene, "../assets/scene.xml");
     lightsGlobalVars::rootNode = &scene.rootNode;
 
     const Vec3 camZ{ -scene.camera.dir.GetNormalized() };
@@ -107,8 +107,8 @@ int main()
     }
 
     scene.renderImage.ComputeZBufferImage();
-    scene.renderImage.SaveZImage("../simpleZbuffer.png");
-    scene.renderImage.SaveImage("../simpleImage.png");
+    scene.renderImage.SaveZImage("../zbuffer.png");
+    scene.renderImage.SaveImage("../image.png");
 
     ShowViewport(&scene);
     return 0;
