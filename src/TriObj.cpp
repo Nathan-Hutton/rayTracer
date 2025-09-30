@@ -4,6 +4,7 @@
 #include <cmath>
 #include <algorithm>
 #include <stack>
+#include <utility>
 
 bool IntersectRayBVHNode(Ray const &r, float t_max, const float* bounds, float* dist);
 
@@ -11,54 +12,12 @@ bool IntersectRayBVHNode(Ray const &r, float t_max, const float* bounds, float* 
 bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const
 {
     //const float* rootNodeBounds{ bvh.GetNodeBounds(bvh.GetRootNodeID()) };
-    std::stack<unsigned int> nodeStack;
+    std::stack<std::pair<unsigned int, float>> nodeStack;
     {
         float dist;
         if (!IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(bvh.GetRootNodeID()), &dist)) return false;
-        nodeStack.push(bvh.GetRootNodeID());
+        nodeStack.push({ bvh.GetRootNodeID(), dist});
     }
-
-    while (!nodeStack.empty())
-    {
-        const unsigned int parentID{ nodeStack.top() };
-        nodeStack.pop();
-
-        if (bvh.IsLeafNode(parentID))
-        {
-
-        }
-
-        const unsigned int child1ID{ bvh.GetFirstChildNode(parentID) };
-        float child1Dist;
-        const bool child1Hit{ IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(child1ID), &child1Dist) };
-
-        const unsigned int child2ID{ bvh.GetFirstChildNode(parentID) };
-        float child2Dist;
-        const bool child2Hit{ IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(child1ID), &child2Dist) };
-
-        if (!child1Hit && !child2Hit) 
-            continue;
-
-        if (child1Hit && child2Hit)
-        {
-            if (child1Dist < child2Dist)
-            {
-                nodeStack.push(child1ID);
-                nodeStack.push(child2ID);
-            }
-            else
-            {
-                nodeStack.push(child2ID);
-                nodeStack.push(child1ID);
-            }
-        }
-
-        if (child1Hit)
-            nodeStack.push(child1ID);
-        if (child2Hit)
-            nodeStack.push(child2ID);
-    }
-
 
     float closestT{ BIGFLOAT };
     Vec3f closestX{};
@@ -69,6 +28,58 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
 
     constexpr float epsilon{ 1e-6 };
     bool hit{ false };
+    while (!nodeStack.empty())
+    {
+        const std::pair<unsigned int, float> nodePair{ nodeStack.top() };
+        const float nodeT{ nodePair.second };
+
+        if (closestT < nodeT)
+            continue;
+
+        const unsigned int parentID{ nodePair.first };
+        nodeStack.pop();
+
+        if (bvh.IsLeafNode(parentID))
+        {
+            continue;
+        }
+
+        const unsigned int child1ID{ bvh.GetFirstChildNode(parentID) };
+        float child1Dist;
+        bool child1Hit{ IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(child1ID), &child1Dist) };
+        child1Hit = child1Hit && child1Dist < closestT;
+
+        const unsigned int child2ID{ bvh.GetFirstChildNode(parentID) };
+        float child2Dist;
+        bool child2Hit{ IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(child1ID), &child2Dist) };
+        child2Hit = child2Hit && child2Dist < closestT;
+
+        if (!child1Hit && !child2Hit) 
+            continue;
+
+        if (child1Hit && child2Hit)
+        {
+            if (child1Dist < child2Dist)
+            {
+                nodeStack.push({ child1ID, child1Dist });
+                nodeStack.push({ child2ID, child2Dist });
+                continue;
+            }
+
+            nodeStack.push({ child2ID, child2Dist });
+            nodeStack.push({ child1ID, child2Dist });
+            continue;
+        }
+
+        if (child1Hit)
+        {
+            nodeStack.push({ child1ID, child1Dist });
+            continue;
+        }
+
+        nodeStack.push({ child2ID, child2Dist });
+    }
+
     for (size_t i{ 0 }; i < nf; ++i)
     {
         const TriFace& vertFace{ f[i] };
