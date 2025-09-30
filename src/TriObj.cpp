@@ -3,11 +3,19 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <stack>
+
+bool IntersectRayBVHNode(Ray const &r, float t_max, const float* bounds, float* dist);
 
 // Möller-Trumbore
 bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const
 {
-    if (!GetBoundBox().IntersectRay(localRay, BIGFLOAT)) return false;
+    const float* rootNodeBounds{ bvh.GetNodeBounds(bvh.GetRootNodeID()) };
+    float dist;
+    if (!IntersectRayBVHNode(localRay, BIGFLOAT, rootNodeBounds, &dist)) return false;
+    std::stack<unsigned int> nodeStack;
+    nodeStack.push(bvh.GetRootNodeID());
+
 
     float closestT{ BIGFLOAT };
     Vec3f closestX{};
@@ -150,4 +158,54 @@ bool Box::IntersectRay(Ray const &r, float t_max) const
     if (tNear > tFar) return false;
 
     return tNear < tFar;
+}
+
+bool IntersectRayBVHNode(Ray const &r, float t_max, const float* bounds, float* dist)
+{
+    const Vec3f invDir{ 1.0f / r.dir.x, 1.0f / r.dir.y, 1.0f / r.dir.z };
+    float tNear{ 0.0f };
+    float tFar{ t_max };
+
+    const Vec3f pmin = Vec3f{ bounds[0], bounds[1], bounds[2] };
+    const Vec3f pmax = Vec3f{ bounds[3], bounds[4], bounds[5] };
+
+    // x
+    float t1{ (pmin.x - r.p.x) * invDir.x };
+    float t2{ (pmax.x - r.p.x) * invDir.x };
+    float slabTMin{ std::min(t1, t2) };
+    float slabTMax{ std::max(t2, t1) };
+
+    tNear = std::max(tNear, slabTMin);
+    tFar = std::min(tFar, slabTMax);
+    if (tNear > tFar) return false;
+
+    // y
+    t1 = (pmin.y - r.p.y) * invDir.y;
+    t2 = (pmax.y - r.p.y) * invDir.y;
+
+    slabTMin = std::min(t1, t2);
+    slabTMax = std::max(t1, t2);
+
+    tNear = std::max(tNear, slabTMin);
+    tFar = std::min(tFar, slabTMax);
+    if (tNear > tFar) return false;
+
+    // z
+    t1 = (pmin.z - r.p.z) * invDir.z;
+    t2 = (pmax.z - r.p.z) * invDir.z;
+
+    slabTMin = std::min(t1, t2);
+    slabTMax = std::max(t1, t2);
+
+    tNear = std::max(tNear, slabTMin);
+    tFar = std::min(tFar, slabTMax);
+    if (tNear > tFar) return false;
+
+    if (tNear < tFar)
+    {
+        *dist = tNear;
+        return true;
+    }
+
+    return false;
 }
