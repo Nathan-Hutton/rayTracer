@@ -10,11 +10,54 @@ bool IntersectRayBVHNode(Ray const &r, float t_max, const float* bounds, float* 
 // Möller-Trumbore
 bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const
 {
-    const float* rootNodeBounds{ bvh.GetNodeBounds(bvh.GetRootNodeID()) };
-    float dist;
-    if (!IntersectRayBVHNode(localRay, BIGFLOAT, rootNodeBounds, &dist)) return false;
+    //const float* rootNodeBounds{ bvh.GetNodeBounds(bvh.GetRootNodeID()) };
     std::stack<unsigned int> nodeStack;
-    nodeStack.push(bvh.GetRootNodeID());
+    {
+        float dist;
+        if (!IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(bvh.GetRootNodeID()), &dist)) return false;
+        nodeStack.push(bvh.GetRootNodeID());
+    }
+
+    while (!nodeStack.empty())
+    {
+        const unsigned int parentID{ nodeStack.top() };
+        nodeStack.pop();
+
+        if (bvh.IsLeafNode(parentID))
+        {
+
+        }
+
+        const unsigned int child1ID{ bvh.GetFirstChildNode(parentID) };
+        float child1Dist;
+        const bool child1Hit{ IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(child1ID), &child1Dist) };
+
+        const unsigned int child2ID{ bvh.GetFirstChildNode(parentID) };
+        float child2Dist;
+        const bool child2Hit{ IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(child1ID), &child2Dist) };
+
+        if (!child1Hit && !child2Hit) 
+            continue;
+
+        if (child1Hit && child2Hit)
+        {
+            if (child1Dist < child2Dist)
+            {
+                nodeStack.push(child1ID);
+                nodeStack.push(child2ID);
+            }
+            else
+            {
+                nodeStack.push(child2ID);
+                nodeStack.push(child1ID);
+            }
+        }
+
+        if (child1Hit)
+            nodeStack.push(child1ID);
+        if (child2Hit)
+            nodeStack.push(child2ID);
+    }
 
 
     float closestT{ BIGFLOAT };
