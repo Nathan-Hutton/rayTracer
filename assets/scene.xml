@@ -43,7 +43,7 @@
       <rotate angle="30" y="1"/>
       <translate x="-8" y="-6" z="4"/>
     </object>
- 
+
     <!-- Materials -->
     <material type="blinn" name="wall">
       <diffuse  r="1" g="1" b="1"/>
@@ -70,7 +70,7 @@
       <refraction value="0.8" index="1.52"/>
       <absorption r="0.01" g="0.001" b="0.0001"/>
     </material>
- 
+
     <!-- Lights -->
     <light type="ambient" name="ambientLight">
       <intensity value="0.1"/>
@@ -80,7 +80,7 @@
       <position x="0" y="0" z="22"/>
     </light>
   </scene>
- 
+
   <camera>
     <position x="0" y="-60" z="12"/>
     <target x="0" y="0" z="12"/>

@@ -9,11 +9,6 @@
 #include <chrono>
 #include <vector>
 
-int LoadScene( RenderScene &scene, char const *filename );
-void ShowViewport( RenderScene *scene );
-
-Node* lightsGlobalVars::rootNode{ nullptr };
-
 bool shootRay(const Node* const node, const Ray& ray, HitInfo& bestHitInfo, int hitSide)
 {
     const Object* const obj{ node->GetNodeObj() };
@@ -69,6 +64,11 @@ bool shootShadowRay(const Node* const node, const Ray& ray, float t_max)
     return false;
 }
 
+namespace
+{
+    Renderer renderer{};
+}
+
 namespace tileThreads
 {
     constexpr int tileSize{ 16 };
@@ -77,7 +77,6 @@ namespace tileThreads
     int totalNumTiles{};
     std::atomic<int> tileCounter{};
 
-    RenderScene scene{};
     float imagePlaneHalfWidth{};
     float imagePlaneHalfHeight{};
     float pixelSize{};
@@ -85,6 +84,44 @@ namespace tileThreads
 
     Color24* pixels{ nullptr };
     float* depthValues{ nullptr };
+}
+
+bool Renderer::TraceRay(Ray const &ray, HitInfo &hInfo, int hitSide) const
+{
+    return shootRay(&scene.rootNode, ray, hInfo, HIT_FRONT_AND_BACK);
+}
+
+bool Renderer::TraceShadowRay(Ray const &ray, float t_max, int hitSide) const
+{
+    return shootShadowRay(&scene.rootNode, ray, t_max);
+}
+
+float ShadeInfo::TraceShadowRay(Ray const &ray, float t_max) const
+{
+    const Ray biasRay{ ray.p + ray.dir * 0.0002f, ray.dir };
+    return renderer.TraceShadowRay(biasRay, t_max) ? 0.0f : 1.0f;
+}
+
+Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist ) const
+{
+    if (!CanBounce())
+    {
+        dist = BIGFLOAT;
+        return Color(0,0,0);
+    }
+
+    HitInfo hInfo{};
+    if (!renderer.TraceRay(ray, hInfo))
+    {
+        dist = BIGFLOAT;
+        return Color(0,0,0);
+    }
+
+    dist = hInfo.z;
+    ShadeInfo newShadeInfo{ *this };
+    newShadeInfo.SetHit(ray, hInfo);
+    newShadeInfo.IncrementBounce();
+    return hInfo.node->GetMaterial()->Shade(newShadeInfo);
 }
 
 void threadRenderTiles()
@@ -96,47 +133,52 @@ void threadRenderTiles()
 
         int imageX{ (tileIndex % tileThreads::numTilesX) * tileThreads::tileSize };
         int imageY{ (tileIndex / tileThreads::numTilesX) * tileThreads::tileSize };
-        int tileWidth{ std::min(tileThreads::tileSize, tileThreads::scene.camera.imgWidth - imageX) };
-        int tileHeight{ std::min(tileThreads::tileSize, tileThreads::scene.camera.imgHeight - imageY) };
+        int tileWidth{ std::min(tileThreads::tileSize, renderer.GetCamera().imgWidth - imageX) };
+        int tileHeight{ std::min(tileThreads::tileSize, renderer.GetCamera().imgHeight - imageY) };
         for (int j{ imageY }; j < imageY + tileHeight; ++j)
         {
             for (int i{ imageX }; i < imageX + tileWidth; ++i)
             {
                 const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + 0.5f) };
                 const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + 0.5f) };
-                const Ray worldRay{ tileThreads::scene.camera.pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
+                const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
 
                 HitInfo hitInfo{};
-                if (shootRay(&tileThreads::scene.rootNode, worldRay, hitInfo))
-                    tileThreads::scene.renderImage.GetPixels()[j * tileThreads::scene.camera.imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(worldRay, hitInfo, tileThreads::scene.lights, 5) };
+                if (renderer.TraceRay(worldRay, hitInfo))
+                {
+                    ShadeInfo sInfo{ renderer.GetScene().lights };
+                    sInfo.SetHit(worldRay, hitInfo);
+                    renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(sInfo) };
+                }
 
-                tileThreads::scene.renderImage.GetZBuffer()[j * tileThreads::scene.camera.imgWidth + i] = hitInfo.z;
+                renderer.GetRenderImage().GetZBuffer()[j * renderer.GetCamera().imgWidth + i] = hitInfo.z;
             }
         }
     }
 }
 
+
 int main()
 {
-    LoadScene(tileThreads::scene, "../assets/scene.xml");
-    lightsGlobalVars::rootNode = &tileThreads::scene.rootNode;
+    renderer.LoadScene("../assets/scene.xml");
+    //renderer.LoadScene("../assets/simpleScene.xml");
 
-    tileThreads::numTilesX = (tileThreads::scene.camera.imgWidth + tileThreads::tileSize - 1) / tileThreads::tileSize;
-    tileThreads::numTilesY = (tileThreads::scene.camera.imgHeight + tileThreads::tileSize - 1) / tileThreads::tileSize;
+    tileThreads::numTilesX = (renderer.GetCamera().imgWidth + tileThreads::tileSize - 1) / tileThreads::tileSize;
+    tileThreads::numTilesY = (renderer.GetCamera().imgHeight + tileThreads::tileSize - 1) / tileThreads::tileSize;
     tileThreads::totalNumTiles = tileThreads::numTilesX * tileThreads::numTilesY;
     tileThreads::tileCounter = 0;
 
-    const Vec3 camZ{ -tileThreads::scene.camera.dir.GetNormalized() };
-    const Vec3f camX{ tileThreads::scene.camera.up.Cross(camZ).GetNormalized() };
+    const Vec3 camZ{ -renderer.GetCamera().dir.GetNormalized() };
+    const Vec3f camX{ renderer.GetCamera().up.Cross(camZ).GetNormalized() };
     const Vec3f camY{ camZ.Cross(camX) };
     tileThreads::cameraToWorld = Matrix3f{ camX, camY, camZ };
 
     constexpr float Pi = 3.14159265358979323846f;
-    tileThreads::imagePlaneHalfHeight = tanf((static_cast<float>(tileThreads::scene.camera.fov) * Pi / 180.0f) / 2.0f);
+    tileThreads::imagePlaneHalfHeight = tanf((static_cast<float>(renderer.GetCamera().fov) * Pi / 180.0f) / 2.0f);
 
-    const float aspectRatio{ static_cast<float>(tileThreads::scene.camera.imgWidth) / static_cast<float>(tileThreads::scene.camera.imgHeight) };
+    const float aspectRatio{ static_cast<float>(renderer.GetCamera().imgWidth) / static_cast<float>(renderer.GetCamera().imgHeight) };
     tileThreads::imagePlaneHalfWidth = aspectRatio * tileThreads::imagePlaneHalfHeight;
-    tileThreads::pixelSize = (tileThreads::imagePlaneHalfWidth * 2.0f) / static_cast<float>(tileThreads::scene.camera.imgWidth);
+    tileThreads::pixelSize = (tileThreads::imagePlaneHalfWidth * 2.0f) / static_cast<float>(renderer.GetCamera().imgWidth);
 
     const auto start{ std::chrono::high_resolution_clock::now() };
 
@@ -153,10 +195,10 @@ int main()
     const auto durationSeconds{ std::chrono::duration_cast<std::chrono::seconds>(end - start) };
     std::cout << "\nTime: " << durationSeconds << " : " << durationMilli % 1000 << '\n';
 
-    tileThreads::scene.renderImage.ComputeZBufferImage();
-    tileThreads::scene.renderImage.SaveZImage("../zbuffer.png");
-    tileThreads::scene.renderImage.SaveImage("../image.png");
+    renderer.GetRenderImage().ComputeZBufferImage();
+    renderer.GetRenderImage().SaveZImage("../zbuffer.png");
+    renderer.GetRenderImage().SaveImage("../image.png");
 
-    ShowViewport(&tileThreads::scene);
+    ShowViewport(&renderer);
     return 0;
 }
