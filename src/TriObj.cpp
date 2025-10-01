@@ -11,15 +11,14 @@ bool IntersectRayBVHNode(Ray const &r, float t_max, const float* bounds, float* 
 // Möller-Trumbore
 bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const
 {
-    //const float* rootNodeBounds{ bvh.GetNodeBounds(bvh.GetRootNodeID()) };
+    float closestT{ BIGFLOAT };
     std::stack<std::pair<unsigned int, float>> nodeStack;
     {
         float dist;
-        if (!IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(bvh.GetRootNodeID()), &dist)) return false;
+        if (!IntersectRayBVHNode(localRay, closestT, bvh.GetNodeBounds(bvh.GetRootNodeID()), &dist)) return false;
         nodeStack.push({ bvh.GetRootNodeID(), dist});
     }
 
-    float closestT{ BIGFLOAT };
     Vec3f closestX{};
     float closestDet{};
     float closestU{};
@@ -31,12 +30,13 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
     while (!nodeStack.empty())
     {
         const std::pair<unsigned int, float> nodePair{ nodeStack.top() };
+        nodeStack.pop();
+
         const float nodeT{ nodePair.second };
         if (closestT < nodeT)
             continue;
 
         const unsigned int parentID{ nodePair.first };
-        nodeStack.pop();
 
         if (bvh.IsLeafNode(parentID))
         {
@@ -79,7 +79,7 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
                 closestDet = det;
                 closestU = u;
                 closestV = v;
-                closestFaceID = i;
+                closestFaceID = elements[i];
             }
 
             continue;
@@ -87,12 +87,12 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
 
         const unsigned int child1ID{ bvh.GetFirstChildNode(parentID) };
         float child1Dist;
-        bool child1Hit{ IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(child1ID), &child1Dist) };
+        bool child1Hit{ IntersectRayBVHNode(localRay, closestT, bvh.GetNodeBounds(child1ID), &child1Dist) };
         child1Hit = child1Hit && child1Dist < closestT;
 
-        const unsigned int child2ID{ bvh.GetFirstChildNode(parentID) };
+        const unsigned int child2ID{ bvh.GetSecondChildNode(parentID) };
         float child2Dist;
-        bool child2Hit{ IntersectRayBVHNode(localRay, BIGFLOAT, bvh.GetNodeBounds(child1ID), &child2Dist) };
+        bool child2Hit{ IntersectRayBVHNode(localRay, closestT, bvh.GetNodeBounds(child2ID), &child2Dist) };
         child2Hit = child2Hit && child2Dist < closestT;
 
         if (!child1Hit && !child2Hit) 
@@ -102,13 +102,13 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
         {
             if (child1Dist < child2Dist)
             {
-                nodeStack.push({ child1ID, child1Dist });
                 nodeStack.push({ child2ID, child2Dist });
+                nodeStack.push({ child1ID, child1Dist });
                 continue;
             }
 
+            nodeStack.push({ child1ID, child1Dist });
             nodeStack.push({ child2ID, child2Dist });
-            nodeStack.push({ child1ID, child2Dist });
             continue;
         }
 
@@ -119,47 +119,6 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
         }
 
         nodeStack.push({ child2ID, child2Dist });
-    }
-
-    for (size_t i{ 0 }; i < nf; ++i)
-    {
-        const TriFace& vertFace{ f[i] };
-
-        const Vec3f& v0{ v[vertFace.v[0]] };
-        const Vec3f& v1{ v[vertFace.v[1]] };
-        const Vec3f& v2{ v[vertFace.v[2]] };
-
-        const Vec3f e1{ v1 - v0 };
-        const Vec3f e2{ v2 - v0 };
-
-        const Vec3f rayCrossE2{ localRay.dir ^ e2 };
-        const float det{ e1 % rayCrossE2 };
-
-        if (det > -epsilon && det < epsilon) continue;
-
-        if (hitSide == HIT_FRONT && det < 0.0f) continue;
-        if (hitSide == HIT_BACK && det > 0.0f) continue;
-
-        const float invDet{ 1.0f / det };
-        const Vec3f s{ localRay.p - v0 };
-
-        const float u{ invDet * (s % rayCrossE2) };
-        if (u < 0.0f || u > 1.0f) continue;
-
-        const Vec3f sCrossE1{ s ^ e1 };
-        const float v{ invDet * (localRay.dir % sCrossE1) };
-        if (v < 0.0f || u + v > 1.0f) continue;
-
-        const float t{ invDet * (e2 % sCrossE1) };
-        if (t <= epsilon || t > closestT) continue;
-
-        hit = true;
-        closestT = t;
-        closestX = localRay.p + localRay.dir * t;
-        closestDet = det;
-        closestU = u;
-        closestV = v;
-        closestFaceID = i;
     }
 
     if (!hit) return false;
