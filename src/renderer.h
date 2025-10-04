@@ -2,7 +2,7 @@
 ///
 /// \file       renderer.h 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    5.0
+/// \version    7.0
 /// \date       September 24, 2025
 ///
 /// \brief Project source for CS 6620 - University of Utah.
@@ -85,7 +85,7 @@ public:
 class ShadeInfo
 {
 public:
-	ShadeInfo( std::vector<Light*> const &lightList ) : lights(lightList) {}
+	ShadeInfo( std::vector<Light*> const &lightList, TexturedColor const &environment ) : lights(lightList), env(environment) {}
 
 	virtual Vec3f P () const { return hInfo.p; }	// returns the shading position
 	virtual Vec3f V () const { return -ray.dir; }	// returns the view vector
@@ -103,7 +103,17 @@ public:
 	virtual int          NumLights()       const { return (int)lights.size(); }	// returns the number of lights to be used during shading
 	virtual Light const* GetLight( int i ) const { return lights[i]; }			// returns the i^th light
 
-	virtual bool CanBounce() const { return bounceS < 5; }	// returns if an additional bounce is permitted
+	virtual int   MaterialID() const { return hInfo.mtlID; }	// returns the material ID
+	virtual Vec3f UVW       () const { return hInfo.uvw; }		// returns the texture coordinates
+	virtual Vec3f dUVW_dX   () const { return hInfo.duvw[0]; }	// returns the texture coordinate derivative in screen-space X direction
+	virtual Vec3f dUVW_dY   () const { return hInfo.duvw[1]; }	// returns the texture coordinate derivative in screen-space Y direction
+
+	virtual Color Eval( TexturedColor const &c ) const { return c.Eval(hInfo.uvw,hInfo.duvw); }	// evaluates the given texture at the shaded texture coordinates
+	virtual float Eval( TexturedFloat const &f ) const { return f.Eval(hInfo.uvw,hInfo.duvw); }	// evaluates the given texture at the shaded texture coordinates
+
+	virtual Color EvalEnvironment( Vec3f const &dir ) const { return env.EvalEnvironment(dir); };	// returns the environment color
+
+	virtual bool CanBounce() const { return false; }	// returns if an additional bounce is permitted
 	virtual int  CurrentSpecularBounce() const { return bounceS; }	// returns the current specular bounce (zero for primary rays)
 
 	// Traces a shadow ray and returns the visibility
@@ -138,6 +148,7 @@ protected:
 	int     bounceS = 0;	// current specular bounce
 
 	std::vector<Light*> const &lights;	// lights
+	TexturedColor       const &env;		// environment
 };
 
 //-------------------------------------------------------------------------------
@@ -166,8 +177,8 @@ public:
 	virtual void StopRender () {}	// Stops the current rendering process. It should wait till rendering threads stop.
 	bool IsRendering() const { return isRendering; }
 
-	virtual bool TraceRay      ( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT_AND_BACK ) const;
-	virtual bool TraceShadowRay( Ray const &ray, float t_max,    int hitSide=HIT_FRONT_AND_BACK ) const;
+	bool TraceRay      ( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT_AND_BACK ) const;
+	bool TraceShadowRay( Ray const &ray, float t_max,    int hitSide=HIT_FRONT_AND_BACK ) const;
 };
 
 //-------------------------------------------------------------------------------

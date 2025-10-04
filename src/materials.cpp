@@ -20,7 +20,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
         if (light->IsAmbient())
         {
-            finalColor += diffuse * lightIntensity;
+            finalColor += diffuse.GetValue() * lightIntensity;
             continue;
         }
 
@@ -28,28 +28,28 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
         if (geometryTerm < 0.0f) continue;
 
-        finalColor += diffuse * lightIntensity * geometryTerm;
+        finalColor += diffuse.GetValue() * lightIntensity * geometryTerm;
 
         const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
         const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-        finalColor += specular * pow(blinnTerm, glossiness) * lightIntensity;// * geometryTerm;
+        finalColor += specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;// * geometryTerm;
     }
 
     if (!shadeInfo.CanBounce())
         return finalColor;
 
     // Reflections
-    if (reflection.Sum() > 0.0f)
+    if (reflection.GetValue().Sum() > 0.0f)
     {
         const Vec3f perfectReflectionDir{ normal * 2 * shadeInfo.V().Dot(normal) - shadeInfo.V() };
         const Ray reflectionRay{ shadeInfo.P() + perfectReflectionDir * 0.0002f, perfectReflectionDir };
 
         float dist;
-        finalColor += shadeInfo.TraceSecondaryRay(reflectionRay, dist) * reflection;
+        finalColor += shadeInfo.TraceSecondaryRay(reflectionRay, dist) * reflection.GetValue();
     }
 
     // Refractions
-    if (refraction.Sum() > 0.0f)
+    if (refraction.GetValue().Sum() > 0.0f)
     {
         const Vec3f N{ shadeInfo.IsFront() ? normal : -normal };
         const float viewDotN{ shadeInfo.V().Dot(N) };
@@ -64,7 +64,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
             const Ray reflectionRay{ shadeInfo.P() + perfectReflectionDir * 0.0002f, perfectReflectionDir };
 
             float dist;
-            Color colorFromReflection{ shadeInfo.TraceSecondaryRay(reflectionRay, dist) * refraction };
+            Color colorFromReflection{ shadeInfo.TraceSecondaryRay(reflectionRay, dist) * refraction.GetValue() };
             const float absorptionRed{ exp(-absorption[0] * dist) };
             const float absorptionGreen{ exp(-absorption[1] * dist) };
             const float absorptionBlue{ exp(-absorption[2] * dist) };
@@ -87,7 +87,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
         const Vec3f refractionDir{ -refractionRatio * shadeInfo.V() - (sqrt(cosThetaRefractionSquared) - refractionRatio * viewDotN) * N };
         Ray refractionRay{ shadeInfo.P() + refractionDir * 0.0002f, refractionDir };
-        Color colorFromRefraction{ shadeInfo.TraceSecondaryRay(refractionRay, dist) * refraction };
+        Color colorFromRefraction{ shadeInfo.TraceSecondaryRay(refractionRay, dist) * refraction.GetValue() };
         const float absorptionRed{ exp(-absorption[0] * dist) };
         const float absorptionGreen{ exp(-absorption[1] * dist) };
         const float absorptionBlue{ exp(-absorption[2] * dist) };

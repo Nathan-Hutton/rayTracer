@@ -146,7 +146,7 @@ void threadRenderTiles()
                 HitInfo hitInfo{};
                 if (renderer.TraceRay(worldRay, hitInfo))
                 {
-                    ShadeInfo sInfo{ renderer.GetScene().lights };
+                    ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().background };
                     sInfo.SetHit(worldRay, hitInfo);
                     renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(sInfo) };
                 }
