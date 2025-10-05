@@ -113,7 +113,7 @@ public:
 
 	virtual Color EvalEnvironment( Vec3f const &dir ) const { return env.EvalEnvironment(dir); };	// returns the environment color
 
-	virtual bool CanBounce() const { return false; }	// returns if an additional bounce is permitted
+	virtual bool CanBounce() const { return bounceS < 5; }	// returns if an additional bounce is permitted
 	virtual int  CurrentSpecularBounce() const { return bounceS; }	// returns the current specular bounce (zero for primary rays)
 
 	// Traces a shadow ray and returns the visibility
