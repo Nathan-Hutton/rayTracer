@@ -124,13 +124,14 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
     if (!hit) return false;
     
     const TriFace& normFace{ fn[closestFaceID] };
+    const TriFace& texFace{ ft[closestFaceID] };
 
     hitInfo.z = closestT;
     hitInfo.p = closestX;
     hitInfo.front = closestDet > 0.0f;
-    //hitInfo.uvw = Vec3f{ closestU, closestV, 1.0f };
 
     hitInfo.N = ((1.0f - closestU - closestV) * vn[normFace.v[0]] + closestU * vn[normFace.v[1]] + closestV * vn[normFace.v[2]]).GetNormalized();
+    hitInfo.uvw = (1.0f - closestU - closestV) * vt[texFace.v[0]] + closestU * vt[texFace.v[1]] + closestV * vt[texFace.v[2]];
 
     return true;
 } 
