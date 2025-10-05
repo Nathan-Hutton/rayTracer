@@ -181,6 +181,8 @@ public:
 	bool TraceShadowRay( Ray const &ray, float t_max,    int hitSide=HIT_FRONT_AND_BACK ) const;
 };
 
+extern Renderer renderer;
+
 //-------------------------------------------------------------------------------
 
 void ShowViewport( Renderer *renderer, bool beginRendering=false );

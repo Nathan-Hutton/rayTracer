@@ -1,5 +1,6 @@
 #include "scene.h"
 #include "lights.h"
+#include "renderer.h"
 #include "cyCore/cyVector.h"
 #include "cyCore/cyMatrix.h"
 
@@ -64,11 +65,6 @@ bool shootShadowRay(const Node* const node, const Ray& ray, float t_max)
     return false;
 }
 
-namespace
-{
-    Renderer renderer{};
-}
-
 namespace tileThreads
 {
     constexpr int tileSize{ 16 };
@@ -114,7 +110,7 @@ Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist ) const
     if (!renderer.TraceRay(ray, hInfo))
     {
         dist = BIGFLOAT;
-        return Color(0,0,0);
+        return EvalEnvironment(ray.dir);
     }
 
     dist = hInfo.z;
@@ -144,11 +140,18 @@ void threadRenderTiles()
                 const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
 
                 HitInfo hitInfo{};
+                ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment };
                 if (renderer.TraceRay(worldRay, hitInfo))
                 {
-                    ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().background };
                     sInfo.SetHit(worldRay, hitInfo);
                     renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(sInfo) };
+                }
+                else
+                {
+                    const float u{ static_cast<float>(i) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
+                    const float v{ static_cast<float>(j) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
+                    renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = 
+                        Color24{ renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) };
                 }
 
                 renderer.GetRenderImage().GetZBuffer()[j * renderer.GetCamera().imgWidth + i] = hitInfo.z;
