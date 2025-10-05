@@ -20,7 +20,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
         if (light->IsAmbient())
         {
-            finalColor += diffuse.GetValue() * lightIntensity;
+            finalColor += diffuse.Eval(shadeInfo.UVW()) * lightIntensity;
             continue;
         }
 
@@ -28,7 +28,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
         if (geometryTerm < 0.0f) continue;
 
-        finalColor += diffuse.GetValue() * lightIntensity * geometryTerm;
+        finalColor += diffuse.Eval(shadeInfo.UVW()) * lightIntensity * geometryTerm;
 
         const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
         const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };

@@ -128,6 +128,7 @@ bool TriObj::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
     hitInfo.z = closestT;
     hitInfo.p = closestX;
     hitInfo.front = closestDet > 0.0f;
+    //hitInfo.uvw = Vec3f{ closestU, closestV, 1.0f };
 
     hitInfo.N = ((1.0f - closestU - closestV) * vn[normFace.v[0]] + closestU * vn[normFace.v[1]] + closestV * vn[normFace.v[2]]).GetNormalized();
 

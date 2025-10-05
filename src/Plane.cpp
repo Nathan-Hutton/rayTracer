@@ -18,6 +18,7 @@ bool Plane::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) con
     hitInfo.p = pos;
     hitInfo.N = Vec3f{ 0.0f, 0.0f, 1.0f };
     hitInfo.front = localRay.dir.z < 0.0f;
+    hitInfo.uvw = Vec3f{ (0.5f * pos) + Vec3f{ 1.0f, 1.0f, 1.0f } };
     return true;
 } 
 
