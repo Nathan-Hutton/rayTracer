@@ -135,32 +135,38 @@ void threadRenderTiles()
         int tileWidth{ std::min(tileThreads::tileSize, renderer.GetCamera().imgWidth - imageX) };
         int tileHeight{ std::min(tileThreads::tileSize, renderer.GetCamera().imgHeight - imageY) };
 
+        constexpr size_t samplesPerPixel{ 1 };
+        constexpr float averagingFraction{ 1.0f / static_cast<float>(samplesPerPixel) };
         for (int j{ imageY }; j < imageY + tileHeight; ++j)
         {
             for (int i{ imageX }; i < imageX + tileWidth; ++i)
             {
-                const float randomOffsetX{ tileThreads::rng.RandomFloat() - 0.5f };
-                const float randomOffsetY{ tileThreads::rng.RandomFloat() - 0.5f };
-                const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + 0.5f + randomOffsetX) };
-                const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + 0.5f + randomOffsetY) };
-                const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
-
-                HitInfo hitInfo{};
-                ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment };
-                if (renderer.TraceRay(worldRay, hitInfo))
+                Color finalPixelColor{ 0.0f };
+                for (size_t sampleNum{ 0 }; sampleNum < samplesPerPixel; ++sampleNum)
                 {
-                    sInfo.SetHit(worldRay, hitInfo);
-                    renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ hitInfo.node->GetMaterial()->Shade(sInfo) };
-                }
-                else
-                {
-                    const float u{ static_cast<float>(i) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
-                    const float v{ static_cast<float>(j) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
-                    renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = 
-                        Color24{ renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) };
-                }
+                    const float randomOffsetX{ tileThreads::rng.RandomFloat() - 0.5f };
+                    const float randomOffsetY{ tileThreads::rng.RandomFloat() - 0.5f };
+                    const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + 0.5f + randomOffsetX) };
+                    const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + 0.5f + randomOffsetY) };
+                    const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
 
-                renderer.GetRenderImage().GetZBuffer()[j * renderer.GetCamera().imgWidth + i] = hitInfo.z;
+                    HitInfo hitInfo{};
+                    ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment };
+                    if (renderer.TraceRay(worldRay, hitInfo))
+                    {
+                        sInfo.SetHit(worldRay, hitInfo);
+                        finalPixelColor += hitInfo.node->GetMaterial()->Shade(sInfo) * averagingFraction;
+                    }
+                    else
+                    {
+                        const float u{ static_cast<float>(i) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
+                        const float v{ static_cast<float>(j) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
+                        finalPixelColor += renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) * averagingFraction;
+                    }
+
+                    //renderer.GetRenderImage().GetZBuffer()[j * renderer.GetCamera().imgWidth + i] = hitInfo.z;
+                }
+                renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ finalPixelColor };
             }
         }
     }
