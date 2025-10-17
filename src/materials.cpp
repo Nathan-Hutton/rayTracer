@@ -32,7 +32,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
         const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
         const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-        finalColor += specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;// * geometryTerm;
+        finalColor += specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
     }
 
     if (!shadeInfo.CanBounce())

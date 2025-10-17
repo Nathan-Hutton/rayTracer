@@ -3,6 +3,7 @@
 #include "renderer.h"
 #include "cyCore/cyVector.h"
 #include "cyCore/cyMatrix.h"
+#include "rng.h"
 
 #include <iostream>
 #include <thread>
@@ -80,6 +81,8 @@ namespace tileThreads
 
     Color24* pixels{ nullptr };
     float* depthValues{ nullptr };
+
+    RNG rng{};
 }
 
 bool Renderer::TraceRay(Ray const &ray, HitInfo &hInfo, int hitSide) const
@@ -131,12 +134,15 @@ void threadRenderTiles()
         int imageY{ (tileIndex / tileThreads::numTilesX) * tileThreads::tileSize };
         int tileWidth{ std::min(tileThreads::tileSize, renderer.GetCamera().imgWidth - imageX) };
         int tileHeight{ std::min(tileThreads::tileSize, renderer.GetCamera().imgHeight - imageY) };
+
         for (int j{ imageY }; j < imageY + tileHeight; ++j)
         {
             for (int i{ imageX }; i < imageX + tileWidth; ++i)
             {
-                const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + 0.5f) };
-                const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + 0.5f) };
+                const float randomOffsetX{ tileThreads::rng.RandomFloat() - 0.5f };
+                const float randomOffsetY{ tileThreads::rng.RandomFloat() - 0.5f };
+                const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + 0.5f + randomOffsetX) };
+                const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + 0.5f + randomOffsetY) };
                 const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
 
                 HitInfo hitInfo{};
@@ -200,6 +206,7 @@ int main()
 
     renderer.GetRenderImage().ComputeZBufferImage();
     renderer.GetRenderImage().SaveZImage("../zbuffer.png");
+    renderer.GetRenderImage().SaveSampleCountImage("../sampleCount.png");
     renderer.GetRenderImage().SaveImage("../image.png");
 
     ShowViewport(&renderer);
