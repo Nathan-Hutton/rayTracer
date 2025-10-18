@@ -84,7 +84,8 @@ namespace tileThreads
 
     constexpr size_t samplesPerPixel{ 16 };
     RNG rng{};
-    HaltonSeq<static_cast<int>(samplesPerPixel)> haltonSeq{ 3 };
+    HaltonSeq<static_cast<int>(samplesPerPixel)> haltonSeqX{ 2 };
+    HaltonSeq<static_cast<int>(samplesPerPixel)> haltonSeqY{ 3 };
 }
 
 bool Renderer::TraceRay(Ray const &ray, HitInfo &hInfo, int hitSide) const
@@ -174,28 +175,145 @@ Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist ) const
 //    }
 //}
 
+// Halton
+//void threadRenderTiles()
+//{
+//    while (true)
+//    {
+//        int tileIndex{ tileThreads::tileCounter++ };
+//        if (tileIndex >= tileThreads::totalNumTiles) break;
+//
+//        int imageX{ (tileIndex % tileThreads::numTilesX) * tileThreads::tileSize };
+//        int imageY{ (tileIndex / tileThreads::numTilesX) * tileThreads::tileSize };
+//        int tileWidth{ std::min(tileThreads::tileSize, renderer.GetCamera().imgWidth - imageX) };
+//        int tileHeight{ std::min(tileThreads::tileSize, renderer.GetCamera().imgHeight - imageY) };
+//
+//        constexpr float averagingFraction{ 1.0f / static_cast<float>(tileThreads::samplesPerPixel) };
+//        for (int j{ imageY }; j < imageY + tileHeight; ++j)
+//        {
+//            for (int i{ imageX }; i < imageX + tileWidth; ++i)
+//            {
+//                Color finalPixelColor{ 0.0f };
+//                for (size_t sampleNum{ 0 }; sampleNum < tileThreads::samplesPerPixel; ++sampleNum)
+//                {
+//                    const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + tileThreads::haltonSeqX[sampleNum]) };
+//                    const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + tileThreads::haltonSeqY[sampleNum]) };
+//                    const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
+//
+//                    HitInfo hitInfo{};
+//                    ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment };
+//                    if (renderer.TraceRay(worldRay, hitInfo))
+//                    {
+//                        sInfo.SetHit(worldRay, hitInfo);
+//                        finalPixelColor += hitInfo.node->GetMaterial()->Shade(sInfo) * averagingFraction;
+//                    }
+//                    else
+//                    {
+//                        const float u{ static_cast<float>(i) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
+//                        const float v{ static_cast<float>(j) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
+//                        finalPixelColor += renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) * averagingFraction;
+//                    }
+//                }
+//                renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ finalPixelColor };
+//            }
+//        }
+//    }
+//}
+
+// Adaptive
 void threadRenderTiles()
 {
+    constexpr size_t minNumSamples{ 4 };
+    constexpr size_t maxNumSamples{ 64 };
+    constexpr std::array<float, maxNumSamples> tLookupTable
+    {
+        12.706f,
+        4.303f,
+        3.182f,
+        2.776f,
+        2.571f,
+        2.447f,
+        2.365f,
+        2.306f,
+        2.262f,
+        2.228f,
+        2.201f,
+        2.179f,
+        2.160f,
+        2.145f,
+        2.131f,
+        2.120f,
+        2.110f,
+        2.101f,
+        2.093f,
+        2.086f,
+        2.080f,
+        2.074f,
+        2.069f,
+        2.064f,
+        2.060f,
+        2.056f,
+        2.052f,
+        2.048f,
+        2.045f,
+        2.042f,
+        2.040f,
+        2.037f,
+        2.035f,
+        2.032f,
+        2.030f,
+        2.028f,
+        2.026f,
+        2.024f,
+        2.023f,
+        2.021f,
+        2.020f,
+        2.018f,
+        2.017f,
+        2.015f,
+        2.014f,
+        2.013f,
+        2.012f,
+        2.011f,
+        2.010f,
+        2.009f,
+        2.008f,
+        2.007f,
+        2.006f,
+        2.005f,
+        2.004f,
+        2.003f,
+        2.002f,
+        2.001f,
+        2.000f,
+        1.999f,
+        1.998f,
+        1.997f,
+        1.996f
+    };
+
     while (true)
     {
-        int tileIndex{ tileThreads::tileCounter++ };
+        const int tileIndex{ tileThreads::tileCounter++ };
         if (tileIndex >= tileThreads::totalNumTiles) break;
 
-        int imageX{ (tileIndex % tileThreads::numTilesX) * tileThreads::tileSize };
-        int imageY{ (tileIndex / tileThreads::numTilesX) * tileThreads::tileSize };
-        int tileWidth{ std::min(tileThreads::tileSize, renderer.GetCamera().imgWidth - imageX) };
-        int tileHeight{ std::min(tileThreads::tileSize, renderer.GetCamera().imgHeight - imageY) };
+        const int imageX{ (tileIndex % tileThreads::numTilesX) * tileThreads::tileSize };
+        const int imageY{ (tileIndex / tileThreads::numTilesX) * tileThreads::tileSize };
+        const int tileWidth{ std::min(tileThreads::tileSize, renderer.GetCamera().imgWidth - imageX) };
+        const int tileHeight{ std::min(tileThreads::tileSize, renderer.GetCamera().imgHeight - imageY) };
 
-        constexpr float averagingFraction{ 1.0f / static_cast<float>(tileThreads::samplesPerPixel) };
         for (int j{ imageY }; j < imageY + tileHeight; ++j)
         {
             for (int i{ imageX }; i < imageX + tileWidth; ++i)
             {
-                Color finalPixelColor{ 0.0f };
-                for (size_t sampleNum{ 0 }; sampleNum < tileThreads::samplesPerPixel; ++sampleNum)
+                Color colorSum{ 0.0f };
+                Color colorSumSquared{ 0.0f };
+                size_t sampleCount{ 0 };
+                for (size_t k{ 0 }; k < maxNumSamples; ++k)
                 {
-                    const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + tileThreads::haltonSeq[sampleNum]) };
-                    const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + tileThreads::haltonSeq[sampleNum]) };
+                    ++sampleCount;
+                    const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + tileThreads::haltonSeqX[k]) };
+                    const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + tileThreads::haltonSeqY[k]) };
                     const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
 
                     HitInfo hitInfo{};
@@ -203,16 +321,35 @@ void threadRenderTiles()
                     if (renderer.TraceRay(worldRay, hitInfo))
                     {
                         sInfo.SetHit(worldRay, hitInfo);
-                        finalPixelColor += hitInfo.node->GetMaterial()->Shade(sInfo) * averagingFraction;
+                        const Color c{ hitInfo.node->GetMaterial()->Shade(sInfo) };
+                        colorSum += c;
+                        colorSumSquared += c * c;
                     }
                     else
                     {
                         const float u{ static_cast<float>(i) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
                         const float v{ static_cast<float>(j) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
-                        finalPixelColor += renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) * averagingFraction;
+                        const Color c{ renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) };
+                        colorSum += c;
+                        colorSumSquared += c * c;
                     }
+
+                    if (sampleCount < minNumSamples)
+                        continue;
+
+                    const Color meanColor{ colorSum / sampleCount };
+                    Color sigma{ (colorSumSquared - ((colorSum * colorSum) / static_cast<float>(sampleCount))) / (static_cast<float>(sampleCount - 1)) };
+                    sigma.r = sqrtf(sigma.r);
+                    sigma.g = sqrtf(sigma.g);
+                    sigma.b = sqrtf(sigma.b);
+                    const Color delta{ tLookupTable[sampleCount - 1] * (sigma / sqrtf(static_cast<float>(sampleCount))) };
+                    constexpr float deltaMax{ 0.01f };
+
+                    if (delta.r < deltaMax && delta.g < deltaMax && delta.b < deltaMax)
+                        break;
                 }
-                renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ finalPixelColor };
+                renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ colorSum / static_cast<float>(sampleCount) };
+                renderer.GetRenderImage().GetSampleCount()[j * renderer.GetCamera().imgWidth + i] = sampleCount;
             }
         }
     }
