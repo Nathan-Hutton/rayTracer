@@ -27,7 +27,7 @@ bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
         hitInfo.N = hitInfo.p;
         hitInfo.front = true;
 
-        const float u{ (1.0f / static_cast<float>(M_PI)) * atan2(hitInfo.p.y, hitInfo.p.x) + 0.5f };
+        const float u{ (1.0f / (2.0f * static_cast<float>(M_PI))) * atan2(hitInfo.p.y, hitInfo.p.x) + 0.5f };
         const float v{ (1.0f / static_cast<float>(M_PI) * asin(hitInfo.p.z) + 0.5f) };
         hitInfo.uvw = Vec3f{ u, v, 1.0f };
 
@@ -46,7 +46,7 @@ bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
         hitInfo.N = hitInfo.p;
         hitInfo.front = false;
 
-        const float u{ (1.0f / static_cast<float>(M_PI)) * atan2(hitInfo.p.y, hitInfo.p.x) + 0.5f };
+        const float u{ (1.0f / (2.0f * static_cast<float>(M_PI))) * atan2(hitInfo.p.y, hitInfo.p.x) + 0.5f };
         const float v{ (1.0f / static_cast<float>(M_PI) * asin(hitInfo.p.z) + 0.5f) };
         hitInfo.uvw = Vec3f{ u, v, 1.0f };
 
@@ -65,7 +65,7 @@ bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
             hitInfo.p = localRay.p + localRay.dir * t1;
             hitInfo.N = hitInfo.p;
 
-            const float u{ (1.0f / static_cast<float>(M_PI)) * atan2(hitInfo.p.y, hitInfo.p.x) + 0.5f };
+            const float u{ (1.0f / (2.0f * static_cast<float>(M_PI))) * atan2(hitInfo.p.y, hitInfo.p.x) + 0.5f };
             const float v{ (1.0f / static_cast<float>(M_PI) * asin(hitInfo.p.z) + 0.5f) };
             hitInfo.uvw = Vec3f{ u, v, 1.0f };
 
@@ -77,7 +77,7 @@ bool Sphere::IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) co
             hitInfo.p = localRay.p + localRay.dir * t2;
             hitInfo.N = hitInfo.p;
 
-            const float u{ (1.0f / static_cast<float>(M_PI)) * atan2(hitInfo.p.y, hitInfo.p.x) + 0.5f };
+            const float u{ (1.0f / (2.0f * static_cast<float>(M_PI))) * atan2(hitInfo.p.y, hitInfo.p.x) + 0.5f };
             const float v{ (1.0f / static_cast<float>(M_PI) * asin(hitInfo.p.z) + 0.5f) };
             hitInfo.uvw = Vec3f{ u, v, 1.0f };
 

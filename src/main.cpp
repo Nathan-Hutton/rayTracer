@@ -84,8 +84,10 @@ namespace tileThreads
 
     constexpr size_t samplesPerPixel{ 16 };
     RNG rng{};
-    HaltonSeq<static_cast<int>(samplesPerPixel)> haltonSeqX{ 2 };
-    HaltonSeq<static_cast<int>(samplesPerPixel)> haltonSeqY{ 3 };
+    HaltonSeq<static_cast<int>(samplesPerPixel)> aaHaltonSeqX{ 2 };
+    HaltonSeq<static_cast<int>(samplesPerPixel)> aaHaltonSeqY{ 3 };
+    HaltonSeq<static_cast<int>(samplesPerPixel)> diskHaltonSeqTheta{ 5 };
+    HaltonSeq<static_cast<int>(samplesPerPixel)> diskHaltonSeqRadius{ 7 };
 }
 
 bool Renderer::TraceRay(Ray const &ray, HitInfo &hInfo, int hitSide) const
@@ -125,100 +127,6 @@ Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist ) const
     newShadeInfo.IncrementBounce();
     return hInfo.node->GetMaterial()->Shade(newShadeInfo);
 }
-
-// Random multi-sampling
-//void threadRenderTiles()
-//{
-//    while (true)
-//    {
-//        int tileIndex{ tileThreads::tileCounter++ };
-//        if (tileIndex >= tileThreads::totalNumTiles) break;
-//
-//        int imageX{ (tileIndex % tileThreads::numTilesX) * tileThreads::tileSize };
-//        int imageY{ (tileIndex / tileThreads::numTilesX) * tileThreads::tileSize };
-//        int tileWidth{ std::min(tileThreads::tileSize, renderer.GetCamera().imgWidth - imageX) };
-//        int tileHeight{ std::min(tileThreads::tileSize, renderer.GetCamera().imgHeight - imageY) };
-//
-//        constexpr float averagingFraction{ 1.0f / static_cast<float>(tileThreads::samplesPerPixel) };
-//        for (int j{ imageY }; j < imageY + tileHeight; ++j)
-//        {
-//            for (int i{ imageX }; i < imageX + tileWidth; ++i)
-//            {
-//                Color finalPixelColor{ 0.0f };
-//                for (size_t sampleNum{ 0 }; sampleNum < tileThreads::samplesPerPixel; ++sampleNum)
-//                {
-//                    const float randomOffsetX{ tileThreads::rng.RandomFloat() - 0.5f };
-//                    const float randomOffsetY{ tileThreads::rng.RandomFloat() - 0.5f };
-//                    const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + 0.5f + randomOffsetX) };
-//                    const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + 0.5f + randomOffsetY) };
-//                    const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
-//
-//                    HitInfo hitInfo{};
-//                    ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment };
-//                    if (renderer.TraceRay(worldRay, hitInfo))
-//                    {
-//                        sInfo.SetHit(worldRay, hitInfo);
-//                        finalPixelColor += hitInfo.node->GetMaterial()->Shade(sInfo) * averagingFraction;
-//                    }
-//                    else
-//                    {
-//                        const float u{ static_cast<float>(i) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
-//                        const float v{ static_cast<float>(j) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
-//                        finalPixelColor += renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) * averagingFraction;
-//                    }
-//
-//                    //renderer.GetRenderImage().GetZBuffer()[j * renderer.GetCamera().imgWidth + i] = hitInfo.z;
-//                }
-//                renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ finalPixelColor };
-//            }
-//        }
-//    }
-//}
-
-// Halton
-//void threadRenderTiles()
-//{
-//    while (true)
-//    {
-//        int tileIndex{ tileThreads::tileCounter++ };
-//        if (tileIndex >= tileThreads::totalNumTiles) break;
-//
-//        int imageX{ (tileIndex % tileThreads::numTilesX) * tileThreads::tileSize };
-//        int imageY{ (tileIndex / tileThreads::numTilesX) * tileThreads::tileSize };
-//        int tileWidth{ std::min(tileThreads::tileSize, renderer.GetCamera().imgWidth - imageX) };
-//        int tileHeight{ std::min(tileThreads::tileSize, renderer.GetCamera().imgHeight - imageY) };
-//
-//        constexpr float averagingFraction{ 1.0f / static_cast<float>(tileThreads::samplesPerPixel) };
-//        for (int j{ imageY }; j < imageY + tileHeight; ++j)
-//        {
-//            for (int i{ imageX }; i < imageX + tileWidth; ++i)
-//            {
-//                Color finalPixelColor{ 0.0f };
-//                for (size_t sampleNum{ 0 }; sampleNum < tileThreads::samplesPerPixel; ++sampleNum)
-//                {
-//                    const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + tileThreads::haltonSeqX[sampleNum]) };
-//                    const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + tileThreads::haltonSeqY[sampleNum]) };
-//                    const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
-//
-//                    HitInfo hitInfo{};
-//                    ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment };
-//                    if (renderer.TraceRay(worldRay, hitInfo))
-//                    {
-//                        sInfo.SetHit(worldRay, hitInfo);
-//                        finalPixelColor += hitInfo.node->GetMaterial()->Shade(sInfo) * averagingFraction;
-//                    }
-//                    else
-//                    {
-//                        const float u{ static_cast<float>(i) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
-//                        const float v{ static_cast<float>(j) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
-//                        finalPixelColor += renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) * averagingFraction;
-//                    }
-//                }
-//                renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ finalPixelColor };
-//            }
-//        }
-//    }
-//}
 
 // Adaptive
 void threadRenderTiles()
@@ -312,9 +220,29 @@ void threadRenderTiles()
                 for (size_t k{ 0 }; k < maxNumSamples; ++k)
                 {
                     ++sampleCount;
-                    const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * (static_cast<float>(i) + tileThreads::haltonSeqX[k]) };
-                    const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * (static_cast<float>(j) + tileThreads::haltonSeqY[k]) };
-                    const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }) };
+
+                    const float pixelX{ static_cast<float>(i) + tileThreads::aaHaltonSeqX[k] };
+                    const float pixelY{ static_cast<float>(j) + tileThreads::aaHaltonSeqY[k] };
+                    const float spaceX{ -tileThreads::imagePlaneHalfWidth + tileThreads::pixelSize * pixelX };
+                    const float spaceY{ tileThreads::imagePlaneHalfHeight - tileThreads::pixelSize * pixelY };
+                    const Vec3f worldRayDestination{ renderer.GetCamera().pos + tileThreads::cameraToWorld * Vec3f{spaceX, spaceY, -renderer.GetCamera().focaldist} };
+                    //const Vec3f pinholeDirCam{ Vec3f{ spaceX, spaceY, -1.0f }.GetNormalized() };
+                    //const Vec3f pinholeFocalCam{ pinholeDirCam * renderer.GetCamera().focaldist };
+                    //const Vec3f worldRayDestination{ renderer.GetCamera().pos + tileThreads::cameraToWorld * pinholeFocalCam };
+                    //const Vec3f worldRayDestination{ renderer.GetCamera().pos + tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -1.0f }.GetNormalized() };
+
+                    const float diskTheta{ tileThreads::diskHaltonSeqTheta[k] * 2.0f * M_PI };
+                    const float diskRadius{ sqrtf(tileThreads::diskHaltonSeqRadius[k]) };
+                    const Vec3f cameraRayPosOffset{
+                        diskRadius * renderer.GetCamera().dof * cos(diskTheta),
+                        diskRadius * renderer.GetCamera().dof * sin(diskTheta),
+                        0.0f
+                    };
+
+                    const Vec3f worldRayPos{ renderer.GetCamera().pos + tileThreads::cameraToWorld * cameraRayPosOffset };
+                    const Vec3f worldRayDir{ worldRayDestination - worldRayPos };
+                    const Ray worldRay{ worldRayPos, worldRayDir };
+                    //const Ray worldRay{ renderer.GetCamera().pos, (tileThreads::cameraToWorld * Vec3f{ spaceX, spaceY, -renderer.GetCamera().focaldist }) };
 
                     HitInfo hitInfo{};
                     ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment };
@@ -327,8 +255,8 @@ void threadRenderTiles()
                     }
                     else
                     {
-                        const float u{ static_cast<float>(i) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
-                        const float v{ static_cast<float>(j) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
+                        const float u{ (static_cast<float>(i) + tileThreads::aaHaltonSeqX[k]) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
+                        const float v{ (static_cast<float>(j) + tileThreads::aaHaltonSeqY[k]) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
                         const Color c{ renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) };
                         colorSum += c;
                         colorSumSquared += c * c;
@@ -339,17 +267,20 @@ void threadRenderTiles()
 
                     const Color meanColor{ colorSum / sampleCount };
                     Color sigma{ (colorSumSquared - ((colorSum * colorSum) / static_cast<float>(sampleCount))) / (static_cast<float>(sampleCount - 1)) };
+                    sigma.r = fmaxf(0.0f, sigma.r);
+                    sigma.g = fmaxf(0.0f, sigma.g);
+                    sigma.b = fmaxf(0.0f, sigma.b);
                     sigma.r = sqrtf(sigma.r);
                     sigma.g = sqrtf(sigma.g);
                     sigma.b = sqrtf(sigma.b);
-                    const Color delta{ tLookupTable[sampleCount - 1] * (sigma / sqrtf(static_cast<float>(sampleCount))) };
+                    const Color delta{ (tLookupTable[sampleCount - 2]) * (sigma / sqrtf(static_cast<float>(sampleCount))) };
                     constexpr float deltaMax{ 0.01f };
 
                     if (delta.r < deltaMax && delta.g < deltaMax && delta.b < deltaMax)
                         break;
                 }
                 renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ colorSum / static_cast<float>(sampleCount) };
-                renderer.GetRenderImage().GetSampleCount()[j * renderer.GetCamera().imgWidth + i] = sampleCount;
+                renderer.GetRenderImage().GetSampleCount()[j * renderer.GetCamera().imgWidth + i] = static_cast<int>(sampleCount);
             }
         }
     }
@@ -359,7 +290,6 @@ void threadRenderTiles()
 int main()
 {
     renderer.LoadScene("../assets/scene.xml");
-    //renderer.LoadScene("../assets/simpleScene.xml");
 
     tileThreads::numTilesX = (renderer.GetCamera().imgWidth + tileThreads::tileSize - 1) / tileThreads::tileSize;
     tileThreads::numTilesY = (renderer.GetCamera().imgHeight + tileThreads::tileSize - 1) / tileThreads::tileSize;
@@ -372,7 +302,8 @@ int main()
     tileThreads::cameraToWorld = Matrix3f{ camX, camY, camZ };
 
     constexpr float Pi = 3.14159265358979323846f;
-    tileThreads::imagePlaneHalfHeight = tanf((static_cast<float>(renderer.GetCamera().fov) * Pi / 180.0f) / 2.0f);
+    //tileThreads::imagePlaneHalfHeight = renderer.GetCamera().focaldist * tanf((static_cast<float>(renderer.GetCamera().fov) * Pi / 180.0f) / 2.0f);
+    tileThreads::imagePlaneHalfHeight = renderer.GetCamera().focaldist * tanf((static_cast<float>(renderer.GetCamera().fov) * Pi / 180.0f) / 2.0f);
 
     const float aspectRatio{ static_cast<float>(renderer.GetCamera().imgWidth) / static_cast<float>(renderer.GetCamera().imgHeight) };
     tileThreads::imagePlaneHalfWidth = aspectRatio * tileThreads::imagePlaneHalfHeight;
@@ -394,6 +325,7 @@ int main()
     std::cout << "\nTime: " << durationSeconds << " : " << durationMilli % 1000 << '\n';
 
     renderer.GetRenderImage().ComputeZBufferImage();
+    renderer.GetRenderImage().ComputeSampleCountImage();
     renderer.GetRenderImage().SaveZImage("../zbuffer.png");
     renderer.GetRenderImage().SaveSampleCountImage("../sampleCount.png");
     renderer.GetRenderImage().SaveImage("../image.png");

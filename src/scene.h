@@ -2,7 +2,7 @@
 ///
 /// \file       scene.h 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    7.1
+/// \version    9.0
 /// \date       October 2, 2025
 ///
 /// \brief Project source for CS 6620 - University of Utah.
@@ -224,7 +224,7 @@ public:
 class Material : public ItemBase
 {
 public:
-	virtual Color Shade( ShadeInfo const &shadeInfo ) const=0;	// the main method that handles shading
+	virtual Color Shade( ShadeInfo const &sInfo ) const=0;	// the main method that handles shading
 	virtual void SetViewportMaterial( int mtlID=0 ) const {}	// used for OpenGL display
 	virtual void Load( Loader const &loader, TextureFileList &textureFileList ) {}
 };
@@ -399,7 +399,7 @@ class Camera
 {
 public:
 	Vec3f pos, dir, up;
-	float fov;
+	float fov, focaldist, dof;
 	int imgWidth, imgHeight;
 
 	void Init()
@@ -408,6 +408,8 @@ public:
 		dir.Set(0,0,-1);
 		up .Set(0,1,0);
 		fov       = 40;
+		focaldist = 1;
+		dof       = 0;
 		imgWidth  = 1920;
 		imgHeight = 1080;
 	}
