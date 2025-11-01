@@ -113,6 +113,7 @@ namespace tileThreads
 bool Renderer::TraceRay(Ray const &ray, HitInfo &hInfo, int hitSide) const
 {
     bool output{ shootRay(&scene.rootNode, ray, hInfo, HIT_FRONT_AND_BACK) };
+    //output = shootRayAtLights(ray, hInfo) || output;
     output |= shootRayAtLights(ray, hInfo);
     return output;
 }
