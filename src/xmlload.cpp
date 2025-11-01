@@ -2,8 +2,8 @@
 ///
 /// \file       xmlload.cpp 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    9.0
-/// \date       October 2, 2025
+/// \version    10.0
+/// \date       September 19, 2025
 ///
 /// \brief Example source for CS 6620 - University of Utah.
 ///
@@ -232,6 +232,7 @@ void PointLight::Load( Loader const &loader )
 {
 	loader.Child("intensity").ReadColor( intensity );
 	loader.Child("position" ).ReadVec3f( position  );
+	loader.Child("size"     ).ReadFloat( size      );
 }
 
 //-------------------------------------------------------------------------------
@@ -241,9 +242,7 @@ void LoadMaterial( Loader loader, MaterialList &materials, TextureFileList &texF
 	Material *mtl = nullptr;
 
 	Loader::String type = loader.Attribute("type");
-	//if      ( type == "phong"      ) mtl = new MtlPhong;
 	if ( type == "blinn"      ) mtl = new MtlBlinn;
-	//else if ( type == "microfacet" ) mtl = new MtlMicrofacet;
 	else {
 		printf("ERROR: Unknown material type %s\n", static_cast<char const*>(type));
 		return;
@@ -266,18 +265,6 @@ void MtlBasePhongBlinn::Load( Loader const &loader, TextureFileList &tfl )
 	loader.Child("refraction").ReadFloat( ior, "index" );
 	loader.Child("absorption").ReadColor( absorption );
 }
-
-//-------------------------------------------------------------------------------
-
-//void MtlMicrofacet::Load( Loader const &loader, TextureFileList &tfl )
-//{
-//	loader.Child("color"        ).ReadTexturedColor( baseColor,     tfl );
-//	loader.Child("roughness"    ).ReadTexturedFloat( roughness,     tfl );
-//	loader.Child("metallic"     ).ReadTexturedFloat( metallic,      tfl );
-//	loader.Child("transmittance").ReadTexturedColor( transmittance, tfl );
-//	loader.Child("ior"          ).ReadFloat( ior        );
-//	loader.Child("absorption"   ).ReadColor( absorption );
-//}
 
 //-------------------------------------------------------------------------------
 

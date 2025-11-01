@@ -106,7 +106,7 @@ float ShadeInfo::TraceShadowRay(Ray const &ray, float t_max) const
     return renderer.TraceShadowRay(biasRay, t_max) ? 0.0f : 1.0f;
 }
 
-Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist ) const
+Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist, bool reflection ) const
 {
     if (!CanBounce())
     {
@@ -124,7 +124,7 @@ Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist ) const
     dist = hInfo.z;
     ShadeInfo newShadeInfo{ *this };
     newShadeInfo.SetHit(ray, hInfo);
-    newShadeInfo.IncrementBounce();
+    ++newShadeInfo.bounce;
     return hInfo.node->GetMaterial()->Shade(newShadeInfo);
 }
 
@@ -184,7 +184,7 @@ void threadRenderTiles()
                     const Ray worldRay{ worldRayPos, worldRayDir };
 
                     HitInfo hitInfo{};
-                    ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment };
+                    ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment, tileThreads::rng };
                     if (renderer.TraceRay(worldRay, hitInfo))
                     {
                         sInfo.SetHit(worldRay, hitInfo);

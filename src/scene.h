@@ -2,8 +2,8 @@
 ///
 /// \file       scene.h 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    9.0
-/// \date       October 2, 2025
+/// \version    10.0
+/// \date       October 25, 2025
 ///
 /// \brief Project source for CS 6620 - University of Utah.
 ///
@@ -77,9 +77,10 @@ struct HitInfo
 	Vec3f       duvw[2];// derivatives of the texture coordinate
 	int         mtlID;	// sub-material index
 	bool        front;	// true if the ray hits the front side, false if the ray hits the back side
+	bool        light;	// true if the ray hits a renderable light source
 
 	HitInfo() { Init(); }
-	void Init() { z=BIGFLOAT; node=nullptr; uvw.Set(0.5f); duvw[0].Zero(); duvw[1].Zero(); mtlID=0; front=true; }
+	void Init() { z=BIGFLOAT; node=nullptr; uvw.Set(0.5f); duvw[0].Zero(); duvw[1].Zero(); mtlID=0; front=true; light=false; }
 };
 
 //-------------------------------------------------------------------------------
@@ -202,7 +203,7 @@ class Object : public ItemBase
 {
 public:
 	virtual bool IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT ) const=0;
-	virtual bool IntersectShadowRay( Ray const &ray, float t_max=BIGFLOAT ) const=0;
+    virtual bool IntersectShadowRay( Ray const &ray, float t_max=BIGFLOAT ) const=0;
 	virtual Box  GetBoundBox() const=0;
 	virtual void ViewportDisplay( Material const *mtl ) const {}	// used for OpenGL display
 	virtual void Load( Loader const &loader ) {}
@@ -210,13 +211,19 @@ public:
 
 //-------------------------------------------------------------------------------
 
-class Light : public ItemBase
+class Light : public Object
 {
 public:
 	virtual Color Illuminate( ShadeInfo const &sInfo, Vec3f &dir ) const=0;	// returns the light intensity and direction
-	virtual bool  IsAmbient () const { return false; }
+	virtual Color Radiance  ( ShadeInfo const &sInfo ) const { return Color(0,0,0); }	// Used for shading a hit point on the light
+	virtual bool  IsAmbient   () const { return false; }
+	virtual bool  IsRenderable() const { return false; }
 	virtual void  SetViewportLight( int lightID ) const {}	// used for OpenGL display
 	virtual void  Load( Loader const &loader ) {}
+
+	// From Object
+	bool IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT ) const override { return false; }
+	Box  GetBoundBox() const override { return Box(); }	// empty box
 };
 
 //-------------------------------------------------------------------------------
@@ -225,8 +232,10 @@ class Material : public ItemBase
 {
 public:
 	virtual Color Shade( ShadeInfo const &sInfo ) const=0;	// the main method that handles shading
-	virtual void SetViewportMaterial( int mtlID=0 ) const {}	// used for OpenGL display
-	virtual void Load( Loader const &loader, TextureFileList &textureFileList ) {}
+	virtual Color Absorption         ( int mtlID=0 ) const { return Color(0,0,0); }	// returns the absorption of the material
+	virtual float IOR                ( int mtlID=0 ) const { return 1.0f; }	// returns the refraction index of the material
+	virtual void  SetViewportMaterial( int mtlID=0 ) const {}	// used for OpenGL display
+	virtual void  Load( Loader const &loader, TextureFileList &textureFileList ) {}
 };
 
 //-------------------------------------------------------------------------------
