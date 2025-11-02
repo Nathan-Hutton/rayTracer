@@ -92,9 +92,9 @@ public:
             const float y{ diskRadius * sin(diskTheta) };
             const Vec3f destination{ position + ((x * size) * u) + (y * size) * v };
 
-            const Vec3f sampleRay{ destination - sInfo.P() };
+            const Vec3f sampleRayDir{ destination - sInfo.P() };
 
-            if (sInfo.TraceShadowRay(sampleRay, 1) == 1.0f)
+            if (sInfo.TraceShadowRay(sampleRayDir, 1.0f) == 1.0f)
                 ++numHits;
 
             if (i + 1 == minNumSamples && (numHits == 0 || numHits == minNumSamples))
