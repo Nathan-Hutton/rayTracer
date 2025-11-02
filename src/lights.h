@@ -73,15 +73,16 @@ public:
         Vec3f v;
         dir.GetOrthonormals(u, v);
 
-        size_t numMisses{ 0 };
+        const float offsetX{ sInfo.RandomFloat() };
+        const float offsetY{ sInfo.RandomFloat() };
+
         size_t numHits{ 0 };
         for (int i{ 0 }; i < 16; ++i)
         {
-            const float offsetX{ sInfo.RandomFloat() };
-            const float offsetY{ sInfo.RandomFloat() };
 
-            const float jitterTheta{ diskHaltonSeqTheta[i] };
-            const float jitterRadius{ diskHaltonSeqRadius[i] };
+            const float jitterTheta{ fmod(offsetX + diskHaltonSeqTheta[i], 1.0f) };
+            const float jitterRadius{ fmod(offsetY + diskHaltonSeqRadius[i], 1.0f) };
+
             const float diskTheta{ jitterTheta * 2.0f * M_PI };
             const float diskRadius{ sqrt(jitterRadius) };
 
@@ -91,9 +92,7 @@ public:
 
             const Vec3f sampleRay{ destination - sInfo.P() };
 
-            if (sInfo.TraceShadowRay(sampleRay, 1) == 0.0f)
-                ++numMisses;
-            else
+            if (sInfo.TraceShadowRay(sampleRay, 1) == 1.0f)
                 ++numHits;
         }
 
