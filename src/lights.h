@@ -58,13 +58,47 @@ protected:
 
 class PointLight : public GenLight
 {
+private:
+    HaltonSeq<static_cast<int>(16)> diskHaltonSeqTheta{ 5 };
+    HaltonSeq<static_cast<int>(16)> diskHaltonSeqRadius{ 7 };
+
 public:
 
 	Color Illuminate( ShadeInfo const &sInfo, Vec3f &dir ) const override 
     { 
-        Vec3f d=position-sInfo.P();
-        dir=d.GetNormalized();
-        return intensity*sInfo.TraceShadowRay(d,1); 
+        Vec3f d{ position - sInfo.P() };
+        dir = d.GetNormalized();
+
+        Vec3f u;
+        Vec3f v;
+        dir.GetOrthonormals(u, v);
+
+        size_t numMisses{ 0 };
+        size_t numHits{ 0 };
+        for (int i{ 0 }; i < 16; ++i)
+        {
+            const float offsetX{ sInfo.RandomFloat() };
+            const float offsetY{ sInfo.RandomFloat() };
+
+            const float jitterTheta{ diskHaltonSeqTheta[i] };
+            const float jitterRadius{ diskHaltonSeqRadius[i] };
+            const float diskTheta{ jitterTheta * 2.0f * M_PI };
+            const float diskRadius{ sqrt(jitterRadius) };
+
+            const float x{ diskRadius * cos(diskTheta) };
+            const float y{ diskRadius * sin(diskTheta) };
+            const Vec3f destination{ position + ((x * size) * u) + (y * size) * v };
+
+            const Vec3f sampleRay{ destination - sInfo.P() };
+
+            if (sInfo.TraceShadowRay(sampleRay, 1) == 0.0f)
+                ++numMisses;
+            else
+                ++numHits;
+        }
+
+        //return intensity * sInfo.TraceShadowRay(d, 1); 
+        return intensity * static_cast<float>(numHits) / 16.0f;
     }
 
 	Color Radiance  ( ShadeInfo const &sInfo ) const override { return intensity; }
@@ -146,24 +180,7 @@ public:
         return false;
     }
 
-    bool IntersectShadowRay( Ray const &ray, float t_max ) const override 
-    {
-        const float a{ ray.dir.Dot(ray.dir) };
-        const float b{ 2 * ray.dir.Dot(ray.p) };
-        const float c{ ray.p.Dot(ray.p) - 1.0f };
-
-        const float discriminant{ b*b - 4*a*c };
-        if (discriminant < 0.0f) return false;
-
-        const float discriminantSquareRoot{ sqrtf(discriminant) };
-        const float inverse2A{ 1.0f / (2.0f * a) };
-
-        const float t1{ (-b - discriminantSquareRoot) * inverse2A };
-        const float t2{ (-b + discriminantSquareRoot) * inverse2A };
-
-        if (t1 >= 0.0f) return t1 < t_max;
-        return t2 >= 0.0f && t2 < t_max;
-    }
+    bool IntersectShadowRay( Ray const &ray, float t_max ) const override { return false; }
 
 	Box  GetBoundBox() const override { return Box( position-size, position+size ); }	// empty box
 	void ViewportDisplay( Material const *mtl ) const override;	// used for OpenGL display
