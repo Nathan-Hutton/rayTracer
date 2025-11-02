@@ -76,10 +76,12 @@ public:
         const float offsetX{ sInfo.RandomFloat() };
         const float offsetY{ sInfo.RandomFloat() };
 
+        constexpr size_t minNumSamples{ 4 };
+        constexpr size_t maxNumSamples{ 64 };
         size_t numHits{ 0 };
-        for (int i{ 0 }; i < 16; ++i)
+        size_t numSamples{ 0 };
+        for (size_t i{ 0 }; i < maxNumSamples; ++i)
         {
-
             const float jitterTheta{ fmod(offsetX + diskHaltonSeqTheta[i], 1.0f) };
             const float jitterRadius{ fmod(offsetY + diskHaltonSeqRadius[i], 1.0f) };
 
@@ -94,10 +96,12 @@ public:
 
             if (sInfo.TraceShadowRay(sampleRay, 1) == 1.0f)
                 ++numHits;
+
+            if (i + 1 == minNumSamples && (numHits == 0 || numHits == minNumSamples))
+                return intensity * static_cast<float>(numHits) / minNumSamples;
         }
 
-        //return intensity * sInfo.TraceShadowRay(d, 1); 
-        return intensity * static_cast<float>(numHits) / 16.0f;
+        return intensity * static_cast<float>(numHits) / maxNumSamples;
     }
 
 	Color Radiance  ( ShadeInfo const &sInfo ) const override { return intensity; }
