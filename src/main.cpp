@@ -210,6 +210,7 @@ void threadRenderTiles()
 
                     HitInfo hitInfo{};
                     ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment, tileThreads::rng };
+                    sInfo.SetPixelSample(i);
                     if (renderer.TraceRay(worldRay, hitInfo))
                     {
                         sInfo.SetHit(worldRay, hitInfo);
