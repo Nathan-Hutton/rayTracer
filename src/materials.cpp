@@ -12,7 +12,7 @@ namespace
 
 Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 {
-    Color finalColor{};
+    Color finalColor{ emission.GetValue() };
 
     Vec3f normal{ shadeInfo.N().GetNormalized() };
     //return Color{ normal.x, normal.y, normal.z };
