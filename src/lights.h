@@ -66,6 +66,7 @@ public:
 	Color Illuminate( ShadeInfo const &sInfo, Vec3f &dir ) const override 
     { 
         Vec3f d{ position - sInfo.P() };
+        const float distSquared{ d.LengthSquared() };
         dir = d.GetNormalized();
 
         Vec3f u;
@@ -97,10 +98,10 @@ public:
                 ++numHits;
 
             if (i + 1 == minNumSamples && (numHits == 0 || numHits == minNumSamples))
-                return intensity * static_cast<float>(numHits) / minNumSamples;
+                return (intensity * static_cast<float>(numHits) / minNumSamples) / distSquared;
         }
 
-        return intensity * static_cast<float>(numHits) / maxNumSamples;
+        return (intensity * static_cast<float>(numHits) / maxNumSamples) / (distSquared * attenuation);
     }
 
 	Color Radiance  ( ShadeInfo const &sInfo ) const override { return intensity / (Pi<float>()*size*size); }

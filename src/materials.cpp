@@ -22,7 +22,11 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     {
         const Light* const light{ shadeInfo.GetLight(i) };
         Vec3f lightDir;
-        const Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
+        Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
+        if (light->IsRenderable())
+        {
+
+        }
 
         if (light->IsAmbient())
         {
