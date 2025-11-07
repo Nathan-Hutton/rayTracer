@@ -23,11 +23,6 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
         const Light* const light{ shadeInfo.GetLight(i) };
         Vec3f lightDir;
         Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
-        if (light->IsRenderable())
-        {
-
-        }
-
         if (light->IsAmbient())
         {
             finalColor += diffuse.Eval(shadeInfo.UVW()) * lightIntensity;
@@ -38,11 +33,11 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
         if (geometryTerm < 0.0f) continue;
 
-        finalColor += diffuse.Eval(shadeInfo.UVW()) * lightIntensity * geometryTerm;
+        finalColor += (1.0f / M_PI) * diffuse.Eval(shadeInfo.UVW()) * lightIntensity * geometryTerm;
 
         const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
         const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-        finalColor += specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
+        finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
     }
 
     if (!shadeInfo.CanBounce())
