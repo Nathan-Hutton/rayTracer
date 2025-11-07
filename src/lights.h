@@ -101,7 +101,7 @@ public:
                 return (intensity * static_cast<float>(numHits) / minNumSamples) / distSquared;
         }
 
-        return (intensity * static_cast<float>(numHits) / maxNumSamples) / (distSquared * attenuation);
+        return (intensity * static_cast<float>(numHits) / maxNumSamples) / distSquared;
     }
 
 	Color Radiance  ( ShadeInfo const &sInfo ) const override { return intensity / (Pi<float>()*size*size); }

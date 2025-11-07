@@ -247,7 +247,7 @@ void threadRenderTiles()
 
                 Color c{ colorSum / static_cast<float>(sampleCount) };
                 if (renderer.GetCamera().sRGB)
-                    colorSum = colorSum.Linear2sRGB();
+                    c = c.Linear2sRGB();
 
                 renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ c };
                 renderer.GetRenderImage().GetSampleCount()[j * renderer.GetCamera().imgWidth + i] = static_cast<int>(sampleCount);
