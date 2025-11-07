@@ -2,7 +2,7 @@
 ///
 /// \file       scene.h 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    10.0
+/// \version    11.0
 /// \date       October 25, 2025
 ///
 /// \brief Project source for CS 6620 - University of Utah.
@@ -410,6 +410,7 @@ public:
 	Vec3f pos, dir, up;
 	float fov, focaldist, dof;
 	int imgWidth, imgHeight;
+	bool sRGB;
 
 	void Init()
 	{
@@ -421,6 +422,7 @@ public:
 		dof       = 0;
 		imgWidth  = 1920;
 		imgHeight = 1080;
+		sRGB      = false;
 	}
 
 	void Load( Loader const &loader );

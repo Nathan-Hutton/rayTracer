@@ -1,116 +1,91 @@
 <xml>
   <scene>
-      <background r="1" g="1" b="1" texture="../assets/clouds.png">
-      <scale y="0.4"/>
-      <translate y="-0.2"/>
-    </background>
-    <environment value="0.7" texture="../assets/clouds.png"/>
-    
     <!-- Objects -->
-    <object type="plane" name="groundPlane" material="ground">
-      <scale value="1000"/>
+    <object name="box">
+      <translate x="0" y="0" z="12"/>
+      <object type="plane" name="WallBottom" material="wall">
+        <scale value="32"/>
+        <translate z="-12"/>
+      </object>
+      <object type="plane" name="WallTop" material="wall">
+        <scale value="32"/>
+        <rotate angle="180" x="1"/>
+        <translate z="12"/>
+      </object>
+      <object type="plane" name="WallBack" material="wall">
+        <scale value="32"/>
+        <rotate angle="90" x="1"/>
+        <translate y="20"/>
+      </object>
+      <object type="plane" name="WallLeft" material="wallRed">
+        <scale value="32"/>
+        <rotate angle="90" y="1"/>
+        <translate x="-15"/>
+      </object>
+      <object type="plane" name="WallRight" material="wallGreen">
+        <scale value="32"/>
+        <rotate angle="-90" y="1"/>
+        <translate x="15"/>
+      </object>
     </object>
-    <object type="plane" name="wall" material="bricks">
-      <scale value="100"/>
-      <rotate angle="90" x="1"/>
-      <translate y="10"/>
+    <object type="sphere" name="sphere1" material="reflective">
+      <scale value="7"/>
+      <translate x="-7" y="3" z="7"/>
     </object>
-    <object type="sphere" name="sphere1" material="smooth">
+    <object type="sphere" name="sphere2" material="smooth">
       <scale value="6"/>
-      <translate x="-28" y="0" z="6"/>
+      <translate x="7" y="-3" z="6"/>
     </object>
-    <object type="sphere" name="sphere2" material="glossy1">
-      <scale value="6"/>
-      <translate x="-16" y="0" z="6"/>
-    </object>
-    <object type="sphere" name="sphere3" material="glossy2">
-      <scale value="6"/>
-      <translate x="-4" y="0" z="6"/>
-    </object>
-    <object type="sphere" name="sphere4" material="glossy3">
-      <scale value="6"/>
-      <translate x="8" y="0" z="6"/>
-    </object>
-    <object type="obj" name="../assets/teapot.obj" material="red">
-      <scale value="0.5"/>
-      <rotate angle="-140" z="1"/>
-      <translate x="2" y="-25" z="0"/>
-    </object>
-    <object type="sphere" name="sphere5" material="glossy4">
-      <scale value="3"/>
-      <translate x="-15" y="-28" z="3"/>
+    <object type="sphere" name="sphere3" material="emissive">
+      <scale value="1"/>
+      <translate x="2" y="-8" z="1"/>
     </object>
 
     <!-- Materials -->
-    <material type="blinn" name="ground">
-      <diffuse r="1" g="1" b="1" texture="checkerboard">
-        <color1 r="0.5" g="0.5" b="0.7"/>
-        <color2 r="1.0" g="1.0" b="1.0"/>
-        <scale value="0.003"/>
-      </diffuse>
+    <material type="blinn" name="wall">
+      <diffuse  r="1" g="1" b="1" value="0.7"/>
       <specular value="0"/>
     </material>
-    <material type="blinn" name="bricks">
-        <diffuse texture="../assets/bricks.png">
-        <scale value="0.05"/>
-      </diffuse>
-      <specular value="0.3"/>
-      <glossiness value="10"/>
+    <material type="blinn" name="wallRed">
+      <diffuse  r="1.0" g="0.2" b="0.2" value="0.7"/>
+      <specular value="0"/>
+    </material>
+    <material type="blinn" name="wallGreen">
+      <diffuse r="0.2" g="1.0" b="0.2" value="0.7"/>
+      <specular value="0"/>
+    </material>
+    <material type="blinn" name="reflective">
+      <diffuse value="0"/>
+      <specular value="0.9"/>
+      <glossiness value="128"/>
+      <reflection value="0.9"/>
     </material>
     <material type="blinn" name="smooth">
-      <diffuse value="0"/>
-      <specular value="0.8"/>
-      <glossiness value="1024"/>
-      <reflection value="0.9"/>
-    </material>
-    <material type="blinn" name="glossy1">
-      <diffuse value="0"/>
-      <specular value="0.4"/>
-      <glossiness value="256"/>
-      <reflection value="0.9"/>
-    </material>
-    <material type="blinn" name="glossy2">
-      <diffuse value="0"/>
-      <specular value="0.2"/>
+      <diffuse value="0.7"/>
+      <specular value="0.3"/>
       <glossiness value="64"/>
-      <reflection value="0.9"/>
     </material>
-    <material type="blinn" name="glossy3">
+    <material type="blinn" name="emissive">
       <diffuse value="0"/>
-      <specular value="0.1"/>
-      <glossiness value="16"/>
-      <reflection value="0.9"/>
-    </material>
-    <material type="blinn" name="red">
-      <diffuse r="0.8" g="0.2" b="0.2"/>
-      <specular value="0.8"/>
-      <glossiness value="1000"/>
-      <reflection value="0.3"/>
-    </material>
-    <material type="blinn" name="glossy4">
-      <diffuse value="0"/>
-      <specular value="0.8"/>
-      <glossiness value="250"/>
-      <refraction index="2.0" value="0.8"/>
+	  <emission value="10"/>
+      <specular value="0"/>
+      <glossiness value="128"/>
     </material>
 
     <!-- Lights -->
-    <light type="ambient" name="ambientLight">
-      <intensity value="0.2"/>
-    </light>
     <light type="point" name="pointLight">
-      <intensity value="1.0"/>
-      <position x="-20" y="-25" z="10"/>
-      <positionx x="-10" y="-20" z="5"/>
-      <size value="2"/>
+      <intensity value="500"/>
+      <position x="0" y="0" z="18"/>
+	  <size value="3"/>
+	  <attenuation value="1"/>
     </light>
   </scene>
 
-  <camera>
-    <position x="5" y="-45" z="12"/>
-    <target x="-5" y="-20" z="2"/>
+  <camera gamma="sRGB">
+    <position x="0" y="-60" z="12"/>
+    <target x="0" y="0" z="12"/>
     <up x="0" y="0" z="1"/>
-    <fov value="45"/>
+    <fov value="30"/>
     <width value="1280"/>
     <height value="720"/>
   </camera>

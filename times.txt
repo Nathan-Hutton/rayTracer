@@ -1,5 +1,0 @@
-2D projection/low res/no bb/no multithreading: 24s
-Moller/low res/no bb/no multithreading: 17.5s
-Moller/low res/no bb/multithreading: 1.5s
-Moller/high res/no bb/multithreading: 37.4s
-Moller/high res/bb/multithreading: 6.4s
