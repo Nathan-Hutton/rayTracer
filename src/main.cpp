@@ -149,8 +149,8 @@ Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist, bool reflection
     ++newShadeInfo.bounce;
     if (hInfo.light)
         return Color{ 1.0f, 1.0f, 1.0f };
-    else
-        return hInfo.node->GetMaterial()->Shade(newShadeInfo);
+
+    return hInfo.node->GetMaterial()->Shade(newShadeInfo);
 }
 
 // Adaptive
