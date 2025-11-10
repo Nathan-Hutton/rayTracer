@@ -49,12 +49,13 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     const float thetaOffset{ shadeInfo.RandomFloat() };
     if (shadeInfo.CurrentBounce() < 2)
     {
-        constexpr size_t numSamples{ 4 };
+        constexpr size_t numSamples{ 2 };
         Color colorSum{ 0.0f };
         for (size_t i{ 0 }; i < numSamples; ++i)
         {
             const float phi{ 2.0f * M_PI * fmod(haltonSeqPhi[shadeInfo.CurrentPixelSample() + i] + phiOffset, 1.0f) };
-            const float cosTheta{ fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f) };
+            //const float cosTheta{ fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f) };
+            const float cosTheta{ sqrt(fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f)) };
             const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
 
             const float x{ sinTheta * cos(phi) };
@@ -67,7 +68,8 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
             const Ray monteRay{ shadeInfo.P() + monteWorldDir * 0.0002f, monteWorldDir };
 
             float dist;
-            colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor * cosTheta * 2.0f;
+            //colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor * cosTheta * 2.0f;
+            colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
         }
         finalColor += colorSum / static_cast<float>(numSamples);
     }
