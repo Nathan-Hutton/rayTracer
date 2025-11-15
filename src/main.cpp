@@ -251,6 +251,7 @@ void threadRenderTiles()
 
                 renderer.GetRenderImage().GetPixels()[j * renderer.GetCamera().imgWidth + i] = Color24{ c };
                 renderer.GetRenderImage().GetSampleCount()[j * renderer.GetCamera().imgWidth + i] = static_cast<int>(sampleCount);
+                renderer.GetRenderImage().IncrementNumRenderPixel(1);
             }
         }
     }

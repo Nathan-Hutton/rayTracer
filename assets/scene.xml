@@ -29,16 +29,16 @@
       </object>
     </object>
     <object type="sphere" name="sphere1" material="reflective">
-      <scale value="7"/>
-      <translate x="-7" y="3" z="7"/>
-    </object>
-    <object type="sphere" name="sphere2" material="smooth">
       <scale value="6"/>
-      <translate x="7" y="-3" z="6"/>
+      <translate x="0" y="4" z="6"/>
     </object>
-    <object type="sphere" name="sphere3" material="emissive">
-      <scale value="1"/>
-      <translate x="2" y="-8" z="1"/>
+    <object type="sphere" name="sphere2" material="refractive">
+      <scale value="5"/>
+      <translate x="9" y="-3" z="5"/>
+    </object>
+    <object type="sphere" name="sphere3" material="smooth">
+      <scale value="5"/>
+      <translate x="-9" y="-3" z="5"/>
     </object>
 
     <!-- Materials -->
@@ -60,23 +60,23 @@
       <glossiness value="128"/>
       <reflection value="0.9"/>
     </material>
+    <material type="blinn" name="refractive">
+      <diffuse value="0"/>
+      <specular value="0"/>
+      <glossiness value="1024"/>
+      <refraction value="0.9" index="1.52"/>
+    </material>
     <material type="blinn" name="smooth">
       <diffuse value="0.7"/>
       <specular value="0.3"/>
       <glossiness value="64"/>
-    </material>
-    <material type="blinn" name="emissive">
-      <diffuse value="0"/>
-	  <emission value="10"/>
-      <specular value="0"/>
-      <glossiness value="128"/>
     </material>
 
     <!-- Lights -->
     <light type="point" name="pointLight">
       <intensity value="500"/>
       <position x="0" y="0" z="18"/>
-	  <size value="3"/>
+	  <size value="1"/>
 	  <attenuation value="1"/>
     </light>
   </scene>

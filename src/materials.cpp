@@ -45,11 +45,11 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
         return finalColor;
 
     // Monte Carlo global illumination
-    const float phiOffset{ shadeInfo.RandomFloat() };
-    const float thetaOffset{ shadeInfo.RandomFloat() };
     if (shadeInfo.CurrentBounce() < 2)
     {
-        constexpr size_t numSamples{ 2 };
+        const float phiOffset{ shadeInfo.RandomFloat() };
+        const float thetaOffset{ shadeInfo.RandomFloat() };
+        constexpr size_t numSamples{ 1 };
         Color colorSum{ 0.0f };
         for (size_t i{ 0 }; i < numSamples; ++i)
         {
@@ -80,6 +80,8 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
         // **************
         // Glossiness ray
         // **************
+        const float phiOffset{ shadeInfo.RandomFloat() };
+        const float thetaOffset{ shadeInfo.RandomFloat() };
         const float phi{ 2.0f * M_PI * fmod(haltonSeqPhi[shadeInfo.CurrentPixelSample()] + phiOffset, 1.0f) };
         const float cosTheta{ pow(fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample()] + thetaOffset, 1.0f), 1.0f / (glossiness.GetValue() + 1.0f)) };
         const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
@@ -105,6 +107,8 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     // Refractions
     if (refraction.GetValue().Sum() > 0.0f)
     {
+        const float phiOffset{ shadeInfo.RandomFloat() };
+        const float thetaOffset{ shadeInfo.RandomFloat() };
         const Vec3f N{ shadeInfo.IsFront() ? normal : -normal };
 
         Vec3f u, v;
@@ -155,7 +159,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
         finalColor += colorFromReflection * fresnelReflectionAmount;
 
         const Vec3f refractionDir{ -refractionRatio * shadeInfo.V() - (sqrt(cosThetaRefractionSquared) - refractionRatio * viewDotH) * h };
-        Ray refractionRay{ shadeInfo.P() + refractionDir * 0.0002f, refractionDir };
+        const Ray refractionRay{ shadeInfo.P() + refractionDir * 0.0002f, refractionDir };
         Color colorFromRefraction{ shadeInfo.TraceSecondaryRay(refractionRay, dist) * refraction.GetValue() };
         const float absorptionRed{ exp(-absorption[0] * dist) };
         const float absorptionGreen{ exp(-absorption[1] * dist) };
