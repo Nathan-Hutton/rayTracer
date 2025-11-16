@@ -1,6 +1,8 @@
 #include "materials.h"
 #include "lights.h"
 #include "scene.h"
+#include "renderer.h"
+#include "photonmap.h"
 #include <iostream>
 
 namespace
@@ -19,27 +21,49 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
     // Calculate color for this object
     const Color diffuseColor{ diffuse.Eval(shadeInfo.UVW()) };
-    for (int i{ 0 }; i < shadeInfo.NumLights(); ++i)
-    {
-        const Light* const light{ shadeInfo.GetLight(i) };
-        Vec3f lightDir;
-        Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
-        if (light->IsAmbient())
-        {
-            finalColor += diffuseColor * lightIntensity;
-            continue;
-        }
 
-        const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
+    Color lightIntensity;
+    Vec3f lightDir;
+    renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 1.0f);
+    //Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
+    //if (light->IsAmbient())
+    //{
+    //    finalColor += diffuseColor * lightIntensity;
+    //    continue;
+    //}
 
-        if (geometryTerm < 0.0f) continue;
+    finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
+    //const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
 
-        finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity * geometryTerm;
+    //if (geometryTerm >= 0.0f)
+    //{
+    //    finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity * geometryTerm;
 
-        const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
-        const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-        finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
-    }
+    //    const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
+    //    const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+    //    finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
+    //}
+    //for (int i{ 0 }; i < shadeInfo.NumLights(); ++i)
+    //{
+    //    const Light* const light{ shadeInfo.GetLight(i) };
+    //    Vec3f lightDir;
+    //    Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
+    //    if (light->IsAmbient())
+    //    {
+    //        finalColor += diffuseColor * lightIntensity;
+    //        continue;
+    //    }
+
+    //    const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
+
+    //    if (geometryTerm < 0.0f) continue;
+
+    //    finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity * geometryTerm;
+
+    //    const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
+    //    const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+    //    finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
+    //}
 
     if (!shadeInfo.CanBounce())
         return finalColor;

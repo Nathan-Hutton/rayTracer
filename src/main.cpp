@@ -300,7 +300,8 @@ int main()
         if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
             break;
     }
-    //PhotonMap.PrepareForIrradianceEstimation();
+    photonMap.ScalePhotonPowers(1.0f / static_cast<float>(photonMap.NumPhotons()));
+    photonMap.PrepareForIrradianceEstimation();
 
     // Render image
     const size_t numThreads{ std::thread::hardware_concurrency() };
