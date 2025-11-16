@@ -4,6 +4,7 @@
 #include "cyCore/cyVector.h"
 #include "cyCore/cyMatrix.h"
 #include "rng.h"
+#include "photonmap.h"
 
 #include <iostream>
 #include <thread>
@@ -261,6 +262,9 @@ void threadRenderTiles()
 int main()
 {
     renderer.LoadScene("../assets/scene.xml");
+    PhotonMap photonMap{};
+    photonMap.Resize(10000000);
+    renderer.SetPhotonMap(&photonMap);
 
     tileThreads::numTilesX = (renderer.GetCamera().imgWidth + tileThreads::tileSize - 1) / tileThreads::tileSize;
     tileThreads::numTilesY = (renderer.GetCamera().imgHeight + tileThreads::tileSize - 1) / tileThreads::tileSize;
@@ -281,6 +285,24 @@ int main()
 
     const auto start{ std::chrono::high_resolution_clock::now() };
 
+    // Fill in photon map
+    const Light* light{ renderer.GetScene().lights[0] };
+    while (true)
+    {
+        Ray photonRay;
+        Color c;
+        light->RandomPhoton(tileThreads::rng, photonRay, c);
+
+        HitInfo hInfo{};
+        if (!renderer.TraceRay(photonRay, hInfo))
+            continue;
+
+        if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
+            break;
+    }
+    //PhotonMap.PrepareForIrradianceEstimation();
+
+    // Render image
     const size_t numThreads{ std::thread::hardware_concurrency() };
     std::vector<std::thread> threads;
     for (size_t i{ 0 }; i < numThreads; ++i)

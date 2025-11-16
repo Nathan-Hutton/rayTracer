@@ -109,7 +109,41 @@ public:
 	Color Intensity     () const override { return intensity; }
 	bool  IsRenderable  () const override { return size > 0.0f; }
 	bool  IsPhotonSource() const override { return true; }
-	void  RandomPhoton( RNG &rng, Ray &r, Color &c ) const override{};
+
+	void  RandomPhoton( RNG &rng, Ray &r, Color &c ) const override
+    {
+        c = intensity * 4.0f * M_PI * size * size;
+
+        // Ray pos
+        float randU{ rng.RandomFloat() };
+        float randV{ rng.RandomFloat() };
+        const float theta{ 2.0f * M_PI * randU };
+        const float posZ{ size * (1.0f - 2.0f * randV) };
+        const float rProj{ sqrtf(size * size - posZ * posZ) };
+        const float posX{ rProj * cos(theta) };
+        const float posY{ rProj * sin(theta) };
+        const Vec3f rayPos{ Vec3f{ posX, posY, posZ } + position };
+        r.p = rayPos;
+
+        // Ray dir
+        randU = rng.RandomFloat();
+        randV = rng.RandomFloat();
+        const float phi{ 2.0f * M_PI * randU };
+        const float cosTheta{ randV };
+        const float sinTheta{ sqrtf(1.0f - cosTheta * cosTheta) };
+
+        const float dirX{ sinTheta * cos(phi) };
+        const float dirY{ sinTheta * sin(phi) };
+        const float dirZ{ cosTheta };
+
+        const Vec3f norm{ (rayPos - position).GetNormalized() };
+        Vec3f u, v;
+        norm.GetOrthonormals(u, v);
+        const Vec3f dir{ (dirX * u) + (dirY * v) + (dirZ * norm) };
+
+        r.dir = dir;
+    }
+
 	void  SetViewportLight( int lightID ) const override;
 	void  Load( Loader const &loader ) override;
 

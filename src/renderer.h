@@ -199,6 +199,7 @@ protected:
 	Scene       scene;
 	Camera      camera;
 	RenderImage renderImage;
+    PhotonMap* photonMap;
 	std::string sceneFile;
 	bool isRendering = false;
 
@@ -220,7 +221,8 @@ public:
 	virtual bool TraceRay      ( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT_AND_BACK ) const;
 	virtual bool TraceShadowRay( Ray const &ray, float t_max,    int hitSide=HIT_FRONT_AND_BACK ) const;
 
-	virtual PhotonMap const * GetPhotonMap  () const { return nullptr; }
+	virtual PhotonMap const * GetPhotonMap  () const { return photonMap; }
+    virtual void SetPhotonMap(PhotonMap* p) { photonMap = p; }
 	virtual PhotonMap const * GetCausticsMap() const { return nullptr; }
 };
 

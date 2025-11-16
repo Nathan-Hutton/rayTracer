@@ -45,7 +45,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
         return finalColor;
 
     // Monte Carlo global illumination
-    if (shadeInfo.CurrentBounce() < 2)
+    if (diffuseColor.Sum() > 0.0f && shadeInfo.CurrentBounce() < 2)
     {
         const float phiOffset{ shadeInfo.RandomFloat() };
         const float thetaOffset{ shadeInfo.RandomFloat() };
