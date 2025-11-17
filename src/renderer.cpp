@@ -1,5 +1,5 @@
 #include "renderer.h"
 
 Renderer renderer;
-const bool doingDirectWithPhotonMapping{ true };
+const bool doingDirectWithPhotonMapping{ false };
 const bool doingIndirectWithPhotonMapping{ true };
