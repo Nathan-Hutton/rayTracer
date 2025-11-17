@@ -11,6 +11,7 @@ namespace
     HaltonSeq<static_cast<int>(16)> haltonSeqTheta{ 3 };
 }
 
+//const bool doingDirectWithPhotonMapping{ true };
 
 Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 {
@@ -22,85 +23,84 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     // Calculate color for this object
     const Color diffuseColor{ diffuse.Eval(shadeInfo.UVW()) };
 
-    if (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f)
+    if (doingDirectWithPhotonMapping)
     {
-        Color lightIntensity;
-        Vec3f lightDir;
-        renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 1.0f);
-
-        if (IsPhotonSurface())
-            finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
-
-        if (specular.GetValue().Sum() > 0.0f)
+        if (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f)
         {
-            const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
-            const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-            finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;
+            Color lightIntensity;
+            Vec3f lightDir;
+            renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 1.0f);
+
+            if (IsPhotonSurface())
+                finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
+
+            if (specular.GetValue().Sum() > 0.0f)
+            {
+                const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
+                const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+                finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;
+            }
         }
     }
-    //const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
+    else
+    {
+        for (int i{ 0 }; i < shadeInfo.NumLights(); ++i)
+        {
+            const Light* const light{ shadeInfo.GetLight(i) };
+            Vec3f lightDir;
+            Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
+            if (light->IsAmbient())
+            {
+                finalColor += diffuseColor * lightIntensity;
+                continue;
+            }
 
-    //if (geometryTerm >= 0.0f)
-    //{
-    //    finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity * geometryTerm;
+            const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
 
-    //    const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
-    //    const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-    //    finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
-    //}
-    //for (int i{ 0 }; i < shadeInfo.NumLights(); ++i)
-    //{
-    //    const Light* const light{ shadeInfo.GetLight(i) };
-    //    Vec3f lightDir;
-    //    Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
-    //    if (light->IsAmbient())
-    //    {
-    //        finalColor += diffuseColor * lightIntensity;
-    //        continue;
-    //    }
+            if (geometryTerm < 0.0f) continue;
 
-    //    const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
+            finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity * geometryTerm;
 
-    //    if (geometryTerm < 0.0f) continue;
-
-    //    finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity * geometryTerm;
-
-    //    const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
-    //    const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-    //    finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
-    //}
+            const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
+            const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+            finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
+        }
+    }
 
     if (!shadeInfo.CanBounce())
         return finalColor;
 
     // Monte Carlo global illumination
-    if (diffuseColor.Sum() > 0.0f && shadeInfo.CurrentBounce() < 2)
+    if (!(doingDirectWithPhotonMapping && doingIndirectWithPhotonMapping))
     {
-        const float phiOffset{ shadeInfo.RandomFloat() };
-        const float thetaOffset{ shadeInfo.RandomFloat() };
-        constexpr size_t numSamples{ 1 };
-        Color colorSum{ 0.0f };
-        for (size_t i{ 0 }; i < numSamples; ++i)
+        if (diffuseColor.Sum() > 0.0f && shadeInfo.CurrentBounce() < 2)
         {
-            const float phi{ 2.0f * M_PI * fmod(haltonSeqPhi[shadeInfo.CurrentPixelSample() + i] + phiOffset, 1.0f) };
-            //const float cosTheta{ fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f) };
-            const float cosTheta{ sqrt(fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f)) };
-            const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
+            const float phiOffset{ shadeInfo.RandomFloat() };
+            const float thetaOffset{ shadeInfo.RandomFloat() };
+            constexpr size_t numSamples{ 1 };
+            Color colorSum{ 0.0f };
+            for (size_t i{ 0 }; i < numSamples; ++i)
+            {
+                const float phi{ 2.0f * M_PI * fmod(haltonSeqPhi[shadeInfo.CurrentPixelSample() + i] + phiOffset, 1.0f) };
+                //const float cosTheta{ fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f) };
+                const float cosTheta{ sqrt(fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f)) };
+                const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
 
-            const float x{ sinTheta * cos(phi) };
-            const float y{ sinTheta * sin(phi) };
-            const float z{ cosTheta };
+                const float x{ sinTheta * cos(phi) };
+                const float y{ sinTheta * sin(phi) };
+                const float z{ cosTheta };
 
-            Vec3f u, v;
-            normal.GetOrthonormals(u, v);
-            const Vec3f monteWorldDir{ (x * u) + (y * v) + (z * normal) };
-            const Ray monteRay{ shadeInfo.P() + monteWorldDir * 0.0002f, monteWorldDir };
+                Vec3f u, v;
+                normal.GetOrthonormals(u, v);
+                const Vec3f monteWorldDir{ (x * u) + (y * v) + (z * normal) };
+                const Ray monteRay{ shadeInfo.P() + monteWorldDir * 0.0002f, monteWorldDir };
 
-            float dist;
-            //colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor * cosTheta * 2.0f;
-            colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
+                float dist;
+                //colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor * cosTheta * 2.0f;
+                colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
+            }
+            finalColor += colorSum / static_cast<float>(numSamples);
         }
-        finalColor += colorSum / static_cast<float>(numSamples);
     }
 
     // Reflections

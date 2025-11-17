@@ -263,7 +263,7 @@ int main()
 {
     renderer.LoadScene("../assets/scene.xml");
     PhotonMap photonMap{};
-    photonMap.Resize(100000);
+    photonMap.Resize(10000);
     renderer.SetPhotonMap(&photonMap);
 
     tileThreads::numTilesX = (renderer.GetCamera().imgWidth + tileThreads::tileSize - 1) / tileThreads::tileSize;
@@ -286,36 +286,81 @@ int main()
     const auto start{ std::chrono::high_resolution_clock::now() };
 
     // Fill in photon map
-    const Light* light{ renderer.GetScene().lights[0] };
-    while (true)
+
+    // In this case, just record first bounce
+    if (!doingIndirectWithPhotonMapping && doingDirectWithPhotonMapping)
     {
-        Ray photonRay;
-        Color c;
-        light->RandomPhoton(tileThreads::rng, photonRay, c);
+        const Light* light{ renderer.GetScene().lights[0] };
+        while (true)
+        {
+            Ray photonRay;
+            Color c;
+            light->RandomPhoton(tileThreads::rng, photonRay, c);
+            photonRay.p += photonRay.dir * 0.0002f;
 
-        HitInfo hInfo{};
-        if (!renderer.TraceRay(photonRay, hInfo))
-            continue;
+            HitInfo hInfo{};
+            if (!renderer.TraceRay(photonRay, hInfo))
+                continue;
 
-        SamplerInfo sInfo{ tileThreads::rng };
-        sInfo.SetHit(photonRay, hInfo);
+            SamplerInfo sInfo{ tileThreads::rng };
+            sInfo.SetHit(photonRay, hInfo);
 
-        const Material* material{ hInfo.node->GetMaterial() };
+            const Material* material{ hInfo.node->GetMaterial() };
 
-        DirSampler::Info info{};
-        Vec3f newDir{};
-        if (!material->GenerateSample(sInfo, newDir, info))
-            continue;
+            DirSampler::Info info{};
+            Vec3f dummy{};
+            if (!material->GenerateSample(sInfo, dummy, info))
+                continue;
 
-        if (info.lobe != DirSampler::Lobe::DIFFUSE)
-            continue;
+            if (info.lobe != DirSampler::Lobe::DIFFUSE)
+                continue;
 
-        if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
-            break;
+            if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
+                break;
+        }
+    }
+    else if (doingIndirectWithPhotonMapping && doingDirectWithPhotonMapping)
+    {
+        const Light* light{ renderer.GetScene().lights[0] };
+        bool mapIsFull{ false };
 
-        //photonRay.dir = newDir;
-        photonRay.p = hInfo.p;
-        c *= info.mult / info.prob;
+        while (!mapIsFull)
+        {
+            Ray photonRay;
+            Color c;
+            light->RandomPhoton(tileThreads::rng, photonRay, c);
+
+            while (true)
+            {
+                photonRay.p += photonRay.dir * 0.0002f;
+                HitInfo hInfo{};
+                if (!renderer.TraceRay(photonRay, hInfo) || hInfo.light)
+                    break;
+
+                SamplerInfo sInfo{ tileThreads::rng };
+                sInfo.SetHit(photonRay, hInfo);
+
+                const Material* material{ hInfo.node->GetMaterial() };
+
+                DirSampler::Info info{};
+                Vec3f newDir{};
+                if (!material->GenerateSample(sInfo, newDir, info))
+                    break;
+
+                if (info.lobe == DirSampler::Lobe::DIFFUSE)
+                {
+                    if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
+                    {
+                        mapIsFull = true;
+                        break;
+                    }
+                }
+
+                photonRay.dir = newDir;
+                photonRay.p = hInfo.p;
+                c *= info.mult / info.prob;
+            }
+        }
     }
     photonMap.ScalePhotonPowers(1.0f / static_cast<float>(photonMap.NumPhotons()));
     photonMap.PrepareForIrradianceEstimation();

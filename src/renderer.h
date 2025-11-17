@@ -24,6 +24,9 @@
 
 #include "lodepng.h"
 
+const extern bool doingDirectWithPhotonMapping;
+const extern bool doingIndirectWithPhotonMapping;
+
 //-------------------------------------------------------------------------------
 
 class PhotonMap;
