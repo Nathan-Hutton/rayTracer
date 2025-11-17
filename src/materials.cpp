@@ -29,7 +29,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
         {
             Color lightIntensity;
             Vec3f lightDir;
-            renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 1.0f);
+            renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.3f);
 
             if (IsPhotonSurface())
                 finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
@@ -78,7 +78,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
             {
                 Color lightIntensity;
                 Vec3f lightDir;
-                renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 1.0f);
+                renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.5f);
 
                 if (IsPhotonSurface())
                     finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
@@ -119,6 +119,23 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
                 colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
             }
             finalColor += colorSum / static_cast<float>(numSamples);
+        }
+    }
+
+    if (doingCaustics && (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f))
+    {
+        Color lightIntensity;
+        Vec3f lightDir;
+        renderer.GetCausticsMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.5f);
+
+        if (IsPhotonSurface())
+            finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
+
+        if (specular.GetValue().Sum() > 0.0f)
+        {
+            const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
+            const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+            finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;
         }
     }
 

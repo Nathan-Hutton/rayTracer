@@ -141,6 +141,8 @@ public:
         }
         if (randomNum < diffuseProb + specularProb + transmissiveProb)
         {
+            const Vec3f N{ sInfo.IsFront() ? sInfo.N() : -sInfo.N() };
+
             si.lobe = DirSampler::Lobe::TRANSMISSION;
             si.mult = refraction.GetValue();
             si.prob = transmissiveProb;
@@ -157,8 +159,8 @@ public:
             const float z{ cosTheta };
 
             Vec3f u, v;
-            sInfo.N().GetOrthonormals(u, v);
-            const Vec3f h{ (x * u) + (y * v) + (z * sInfo.N()) };
+            N.GetOrthonormals(u, v);
+            const Vec3f h{ (x * u) + (y * v) + (z * N) };
 
             const Vec3f V{ sInfo.V() };
             const float refractionRatio{ sInfo.IsFront() ? 1.0f / ior : ior };
@@ -167,13 +169,21 @@ public:
             const float sinTheta_t_sq{ (refractionRatio * refractionRatio) * (1.0f - cosTheta_i * cosTheta_i) };
 
             if (sinTheta_t_sq > 1.0f)
-                return false;
+            {
+                si.lobe = DirSampler::Lobe::SPECULAR;
+                si.mult = refraction.GetValue();
+                si.prob = 1.0f;
+
+                const Vec3f V{ sInfo.V() };
+                dir = h * 2 * V.Dot(h) - V;
+                return dir.Dot(N) > 0.0f;
+            }
 
             const float cosTheta_t{ sqrtf(1.0f - sinTheta_t_sq) };
 
             dir = -V * refractionRatio + h * (refractionRatio * cosTheta_i - cosTheta_t);
 
-            return dir.Dot(sInfo.N()) < 0.0f;
+            return dir.Dot(N) < 0.0f;
         }
         return false;
 

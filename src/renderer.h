@@ -26,6 +26,7 @@
 
 const extern bool doingDirectWithPhotonMapping;
 const extern bool doingIndirectWithPhotonMapping;
+const extern bool doingCaustics;
 
 //-------------------------------------------------------------------------------
 
@@ -203,6 +204,7 @@ protected:
 	Camera      camera;
 	RenderImage renderImage;
     PhotonMap* photonMap;
+    PhotonMap* causticsMap;
 	std::string sceneFile;
 	bool isRendering = false;
 
@@ -226,7 +228,8 @@ public:
 
 	virtual PhotonMap const * GetPhotonMap  () const { return photonMap; }
     virtual void SetPhotonMap(PhotonMap* p) { photonMap = p; }
-	virtual PhotonMap const * GetCausticsMap() const { return nullptr; }
+	virtual PhotonMap const * GetCausticsMap() const { return causticsMap; }
+    virtual void SetCausticsMap(PhotonMap* c) { causticsMap = c; }
 };
 
 extern Renderer renderer;

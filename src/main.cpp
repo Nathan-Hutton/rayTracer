@@ -266,6 +266,10 @@ int main()
     photonMap.Resize(100000);
     renderer.SetPhotonMap(&photonMap);
 
+    PhotonMap causticsMap{};
+    causticsMap.Resize(100000);
+    renderer.SetCausticsMap(&causticsMap);
+
     tileThreads::numTilesX = (renderer.GetCamera().imgWidth + tileThreads::tileSize - 1) / tileThreads::tileSize;
     tileThreads::numTilesY = (renderer.GetCamera().imgHeight + tileThreads::tileSize - 1) / tileThreads::tileSize;
     tileThreads::totalNumTiles = tileThreads::numTilesX * tileThreads::numTilesY;
@@ -413,6 +417,56 @@ int main()
     }
     photonMap.ScalePhotonPowers(1.0f / static_cast<float>(photonMap.NumPhotons()));
     photonMap.PrepareForIrradianceEstimation();
+
+    if (doingCaustics)
+    {
+        const Light* light{ renderer.GetScene().lights[0] };
+        bool mapIsFull{ false };
+
+        while (!mapIsFull)
+        {
+            Ray photonRay;
+            Color c;
+            light->RandomPhoton(tileThreads::rng, photonRay, c);
+
+            bool firstHit{ true };
+
+            while (true)
+            {
+                photonRay.p += photonRay.dir * 0.0002f;
+                HitInfo hInfo{};
+                if (!renderer.TraceRay(photonRay, hInfo) || hInfo.light)
+                    break;
+
+                SamplerInfo sInfo{ tileThreads::rng };
+                sInfo.SetHit(photonRay, hInfo);
+
+                const Material* material{ hInfo.node->GetMaterial() };
+
+                DirSampler::Info info{};
+                Vec3f newDir{};
+                if (!material->GenerateSample(sInfo, newDir, info))
+                    break;
+
+                if (info.lobe == DirSampler::Lobe::DIFFUSE)
+                {
+                    if (firstHit)
+                        break;
+
+                    if (!causticsMap.AddPhoton(hInfo.p, photonRay.dir, c))
+                        mapIsFull = true;
+                    break;
+                }
+                firstHit = false;
+
+                photonRay.dir = newDir;
+                photonRay.p = hInfo.p;
+                c *= info.mult / info.prob;
+            }
+        }
+        causticsMap.ScalePhotonPowers(1.0f / static_cast<float>(causticsMap.NumPhotons()));
+        causticsMap.PrepareForIrradianceEstimation();
+    }
 
     // Render image
     const size_t numThreads{ std::thread::hardware_concurrency() };
