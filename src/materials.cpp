@@ -22,12 +22,21 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     // Calculate color for this object
     const Color diffuseColor{ diffuse.Eval(shadeInfo.UVW()) };
 
-    if (IsPhotonSurface())
+    if (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f)
     {
         Color lightIntensity;
         Vec3f lightDir;
         renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 1.0f);
-        finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
+
+        if (IsPhotonSurface())
+            finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
+
+        if (specular.GetValue().Sum() > 0.0f)
+        {
+            const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
+            const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+            finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;
+        }
     }
     //const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
 

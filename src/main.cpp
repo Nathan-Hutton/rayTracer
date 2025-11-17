@@ -312,6 +312,10 @@ int main()
 
         if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
             break;
+
+        //photonRay.dir = newDir;
+        photonRay.p = hInfo.p;
+        c *= info.mult / info.prob;
     }
     photonMap.ScalePhotonPowers(1.0f / static_cast<float>(photonMap.NumPhotons()));
     photonMap.PrepareForIrradianceEstimation();

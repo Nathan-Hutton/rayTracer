@@ -81,26 +81,37 @@ public:
 
 	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override 
     {
-        const float randomNum{ sInfo.RandomFloat() };
-        const float diffuseProb{ diffuse.GetValue().Gray() };
-        const float specularProb{ specular.GetValue().Gray() };
-        const float transmissiveProb{ refraction.GetValue().Gray() };
+        float diffuseProb{ diffuse.GetValue().Gray() };
+        float specularProb{ specular.GetValue().Gray() };
+        float transmissiveProb{ refraction.GetValue().Gray() };
 
+        const float totalProb{ diffuseProb + specularProb + transmissiveProb };
+        if (totalProb > 1.0f)
+        {
+            diffuseProb /= totalProb;
+            specularProb /= totalProb;
+            transmissiveProb /= totalProb;
+        }
+
+        const float randomNum{ sInfo.RandomFloat() };
         if (randomNum < diffuseProb)
         {
             si.lobe = DirSampler::Lobe::DIFFUSE;
+            si.mult = diffuse.GetValue();
             si.prob = diffuseProb;
             return true;
         }
         if (randomNum < diffuseProb + specularProb)
         {
             si.lobe = DirSampler::Lobe::SPECULAR;
+            si.mult = specular.GetValue();
             si.prob = specularProb;
             return true;
         }
         if (randomNum < diffuseProb + specularProb + transmissiveProb)
         {
             si.lobe = DirSampler::Lobe::TRANSMISSION;
+            si.mult = refraction.GetValue();
             si.prob = transmissiveProb;
             return true;
         }
