@@ -13,6 +13,7 @@
 #define _MATERIALS_H_INCLUDED_
 
 #include "renderer.h"
+#include <iostream>
 
 //-------------------------------------------------------------------------------
 
@@ -78,7 +79,34 @@ public:
 	Color Shade( ShadeInfo const &shadeInfo ) const override;
 	void SetViewportMaterial ( int mtlID=0 ) const override;	// used for OpenGL display
 
-	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override { return false; }
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override 
+    {
+        const float randomNum{ sInfo.RandomFloat() };
+        const float diffuseProb{ diffuse.GetValue().Gray() };
+        const float specularProb{ specular.GetValue().Gray() };
+        const float transmissiveProb{ refraction.GetValue().Gray() };
+
+        if (randomNum < diffuseProb)
+        {
+            si.lobe = DirSampler::Lobe::DIFFUSE;
+            si.prob = diffuseProb;
+            return true;
+        }
+        if (randomNum < diffuseProb + specularProb)
+        {
+            si.lobe = DirSampler::Lobe::SPECULAR;
+            si.prob = specularProb;
+            return true;
+        }
+        if (randomNum < diffuseProb + specularProb + transmissiveProb)
+        {
+            si.lobe = DirSampler::Lobe::TRANSMISSION;
+            si.prob = transmissiveProb;
+            return true;
+        }
+        return false;
+
+    }
 };
 
 //-------------------------------------------------------------------------------

@@ -236,7 +236,10 @@ public:
 	};
 
 	// Generates a new direction sample and sets the corresponding sample information. Returns true if a sample is generated.
-	virtual bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const { return false; }
+	virtual bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const 
+    {
+        return false;
+    }
 };
 
 //-------------------------------------------------------------------------------

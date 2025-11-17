@@ -22,17 +22,13 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     // Calculate color for this object
     const Color diffuseColor{ diffuse.Eval(shadeInfo.UVW()) };
 
-    Color lightIntensity;
-    Vec3f lightDir;
-    renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 1.0f);
-    //Color lightIntensity{ light->Illuminate(shadeInfo, lightDir) };
-    //if (light->IsAmbient())
-    //{
-    //    finalColor += diffuseColor * lightIntensity;
-    //    continue;
-    //}
-
-    finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
+    if (IsPhotonSurface())
+    {
+        Color lightIntensity;
+        Vec3f lightDir;
+        renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 1.0f);
+        finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
+    }
     //const float geometryTerm{ std::max(0.0f, normal.Dot(lightDir)) };
 
     //if (geometryTerm >= 0.0f)

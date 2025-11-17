@@ -263,7 +263,7 @@ int main()
 {
     renderer.LoadScene("../assets/scene.xml");
     PhotonMap photonMap{};
-    photonMap.Resize(10000000);
+    photonMap.Resize(100000);
     renderer.SetPhotonMap(&photonMap);
 
     tileThreads::numTilesX = (renderer.GetCamera().imgWidth + tileThreads::tileSize - 1) / tileThreads::tileSize;
@@ -295,6 +295,19 @@ int main()
 
         HitInfo hInfo{};
         if (!renderer.TraceRay(photonRay, hInfo))
+            continue;
+
+        SamplerInfo sInfo{ tileThreads::rng };
+        sInfo.SetHit(photonRay, hInfo);
+
+        const Material* material{ hInfo.node->GetMaterial() };
+
+        DirSampler::Info info{};
+        Vec3f newDir{};
+        if (!material->GenerateSample(sInfo, newDir, info))
+            continue;
+
+        if (info.lobe != DirSampler::Lobe::DIFFUSE)
             continue;
 
         if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
