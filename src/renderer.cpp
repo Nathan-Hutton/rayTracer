@@ -3,4 +3,4 @@
 Renderer renderer;
 const bool doingDirectWithPhotonMapping{ false };
 const bool doingIndirectWithPhotonMapping{ true };
-const bool doingCaustics{ false };
+const bool doingCaustics{ true };

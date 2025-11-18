@@ -433,24 +433,31 @@ int main()
 
                 SamplerInfo sInfo{ tileThreads::rng };
                 sInfo.SetHit(photonRay, hInfo);
-
-                const Material* material{ hInfo.node->GetMaterial() };
-
                 DirSampler::Info info{};
                 Vec3f newDir{};
-                if (!material->GenerateSample(sInfo, newDir, info))
-                    break;
+                const Material* material{ hInfo.node->GetMaterial() };
+                const bool bounce{ material->GenerateSample(sInfo, newDir, info) };
 
-                if (info.lobe == DirSampler::Lobe::DIFFUSE)
+                if (firstHit)
                 {
-                    if (firstHit)
+                    if (!bounce || info.lobe == DirSampler::Lobe::DIFFUSE)
                         break;
 
-                    if (!causticsMap.AddPhoton(hInfo.p, photonRay.dir, c))
-                        mapIsFull = true;
+                    firstHit = false;
+                    photonRay.dir = newDir;
+                    photonRay.p = hInfo.p;
+                    c *= info.mult / info.prob;
+                    continue;
+                }
+
+                if (material->IsPhotonSurface())
+                {
+                    mapIsFull = !causticsMap.AddPhoton(hInfo.p, photonRay.dir, c);
                     break;
                 }
-                firstHit = false;
+
+                if (!bounce) // No need to check if it's a diffuse bounce since we already check IsPhotonSurface()
+                    break;
 
                 photonRay.dir = newDir;
                 photonRay.p = hInfo.p;
