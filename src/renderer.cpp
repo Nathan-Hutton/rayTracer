@@ -1,6 +1,6 @@
 #include "renderer.h"
 
 Renderer renderer;
-const bool doingDirectWithPhotonMapping{ false };
-const bool doingIndirectWithPhotonMapping{ true };
-const bool doingCaustics{ true };
+const bool doingDirectWithPhotonMapping{ true };
+const bool doingIndirectWithPhotonMapping{ false };
+const bool doingCaustics{ false };

@@ -307,17 +307,8 @@ int main()
             if (!renderer.TraceRay(photonRay, hInfo))
                 continue;
 
-            SamplerInfo sInfo{ tileThreads::rng };
-            sInfo.SetHit(photonRay, hInfo);
-
             const Material* material{ hInfo.node->GetMaterial() };
-
-            DirSampler::Info info{};
-            Vec3f dummy{};
-            if (!material->GenerateSample(sInfo, dummy, info))
-                continue;
-
-            if (info.lobe != DirSampler::Lobe::DIFFUSE)
+            if (!material->IsPhotonSurface())
                 continue;
 
             if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
