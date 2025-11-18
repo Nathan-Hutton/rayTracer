@@ -333,24 +333,23 @@ int main()
                 if (!renderer.TraceRay(photonRay, hInfo) || hInfo.light)
                     break;
 
+                const Material* material{ hInfo.node->GetMaterial() };
+                if (!material->IsPhotonSurface())
+                    break;
+
+                if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
+                {
+                    mapIsFull = true;
+                    break;
+                }
+
                 SamplerInfo sInfo{ tileThreads::rng };
                 sInfo.SetHit(photonRay, hInfo);
-
-                const Material* material{ hInfo.node->GetMaterial() };
 
                 DirSampler::Info info{};
                 Vec3f newDir{};
                 if (!material->GenerateSample(sInfo, newDir, info))
                     break;
-
-                if (info.lobe == DirSampler::Lobe::DIFFUSE)
-                {
-                    if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
-                    {
-                        mapIsFull = true;
-                        break;
-                    }
-                }
 
                 photonRay.dir = newDir;
                 photonRay.p = hInfo.p;
