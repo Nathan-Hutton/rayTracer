@@ -334,10 +334,7 @@ int main()
                     break;
 
                 const Material* material{ hInfo.node->GetMaterial() };
-                if (!material->IsPhotonSurface())
-                    break;
-
-                if (!photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
+                if (material->IsPhotonSurface() && !photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
                 {
                     mapIsFull = true;
                     break;
@@ -377,24 +374,32 @@ int main()
                 if (!renderer.TraceRay(photonRay, hInfo) || hInfo.light)
                     break;
 
+                SamplerInfo sInfo{ tileThreads::rng };
+                sInfo.SetHit(photonRay, hInfo);
+                DirSampler::Info info{};
+                Vec3f newDir{};
                 const Material* material{ hInfo.node->GetMaterial() };
-                if (!material->IsPhotonSurface())
-                    break;
+                const bool bounce{ material->GenerateSample(sInfo, newDir, info) };
 
-                if (!firstHit && !photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
+                if (firstHit)
+                {
+                    if (!bounce)
+                        break;
+
+                    firstHit = false;
+                    photonRay.dir = newDir;
+                    photonRay.p = hInfo.p;
+                    c *= info.mult / info.prob;
+                    continue;
+                }
+
+                if (material->IsPhotonSurface() && !photonMap.AddPhoton(hInfo.p, photonRay.dir, c))
                 {
                     mapIsFull = true;
                     break;
                 }
 
-                firstHit = false;
-
-                SamplerInfo sInfo{ tileThreads::rng };
-                sInfo.SetHit(photonRay, hInfo);
-
-                DirSampler::Info info{};
-                Vec3f newDir{};
-                if (!material->GenerateSample(sInfo, newDir, info))
+                if (!bounce)
                     break;
 
                 photonRay.dir = newDir;
