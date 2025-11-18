@@ -11,8 +11,6 @@ namespace
     HaltonSeq<static_cast<int>(16)> haltonSeqTheta{ 3 };
 }
 
-//const bool doingDirectWithPhotonMapping{ true };
-
 Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 {
     Color finalColor{ emission.GetValue() };
@@ -23,26 +21,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     // Calculate color for this object
     const Color diffuseColor{ diffuse.Eval(shadeInfo.UVW()) };
 
-    if (doingDirectWithPhotonMapping)
-    {
-        if (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f)
-        {
-            Color lightIntensity;
-            Vec3f lightDir;
-            renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.3f);
-
-            if (IsPhotonSurface())
-                finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
-
-            if (specular.GetValue().Sum() > 0.0f)
-            {
-                const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
-                const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-                finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;
-            }
-        }
-    }
-    else
+    if (!doingDirectWithPhotonMapping)
     {
         for (int i{ 0 }; i < shadeInfo.NumLights(); ++i)
         {
@@ -63,70 +42,34 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
 
             const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
             const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-            finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
+            finalColor += ((glossiness.GetValue() + 2.0f) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity * geometryTerm;
         }
     }
 
-    if (!shadeInfo.CanBounce())
-        return finalColor;
-
-    if (!(doingDirectWithPhotonMapping && doingIndirectWithPhotonMapping))
+    // Using photon maps
+    if ((doingDirectWithPhotonMapping || doingIndirectWithPhotonMapping) && (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f))
     {
-        if (doingIndirectWithPhotonMapping)
+        Color lightIntensity;
+        Vec3f lightDir;
+        renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.5f);
+
+        if (IsPhotonSurface())
+            finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
+
+        if (specular.GetValue().Sum() > 0.0f)
         {
-            if (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f)
-            {
-                Color lightIntensity;
-                Vec3f lightDir;
-                renderer.GetPhotonMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.5f);
-
-                if (IsPhotonSurface())
-                    finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
-
-                if (specular.GetValue().Sum() > 0.0f)
-                {
-                    const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
-                    const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
-                    finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;
-                }
-            }
-        }
-        // Monte Carlo global illumination
-        else if (diffuseColor.Sum() > 0.0f && shadeInfo.CurrentBounce() < 2)
-        {
-            const float phiOffset{ shadeInfo.RandomFloat() };
-            const float thetaOffset{ shadeInfo.RandomFloat() };
-            constexpr size_t numSamples{ 1 };
-            Color colorSum{ 0.0f };
-            for (size_t i{ 0 }; i < numSamples; ++i)
-            {
-                const float phi{ 2.0f * M_PI * fmod(haltonSeqPhi[shadeInfo.CurrentPixelSample() + i] + phiOffset, 1.0f) };
-                //const float cosTheta{ fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f) };
-                const float cosTheta{ sqrt(fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f)) };
-                const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
-
-                const float x{ sinTheta * cos(phi) };
-                const float y{ sinTheta * sin(phi) };
-                const float z{ cosTheta };
-
-                Vec3f u, v;
-                normal.GetOrthonormals(u, v);
-                const Vec3f monteWorldDir{ (x * u) + (y * v) + (z * normal) };
-                const Ray monteRay{ shadeInfo.P() + monteWorldDir * 0.0002f, monteWorldDir };
-
-                float dist;
-                //colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor * cosTheta * 2.0f;
-                colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
-            }
-            finalColor += colorSum / static_cast<float>(numSamples);
+            const Vec3f halfway{ (shadeInfo.V() + lightDir).GetNormalized() };
+            const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
+            finalColor += ((glossiness.GetValue() + 2.0f) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;
         }
     }
 
+    // Using Caustics
     if (doingCaustics && (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f))
     {
         Color lightIntensity;
         Vec3f lightDir;
-        renderer.GetCausticsMap()->EstimateIrradiance<100>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.5f);
+        renderer.GetCausticsMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.5f);
 
         if (IsPhotonSurface())
             finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
@@ -137,6 +80,40 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
             const float blinnTerm{ std::max(0.0f, normal.Dot(halfway)) };
             finalColor += ((glossiness.GetValue() + 2) / (8.0f * M_PI)) * specular.GetValue() * pow(blinnTerm, glossiness.GetValue()) * lightIntensity;
         }
+    }
+
+
+    if (!shadeInfo.CanBounce())
+        return finalColor;
+
+    // Not using photon mapping for indirect (do monte-carlo instead)
+    if (!doingIndirectWithPhotonMapping && (diffuseColor.Sum() > 0.0f && shadeInfo.CurrentBounce() < 2))
+    {
+        const float phiOffset{ shadeInfo.RandomFloat() };
+        const float thetaOffset{ shadeInfo.RandomFloat() };
+        constexpr size_t numSamples{ 1 };
+        Color colorSum{ 0.0f };
+        for (size_t i{ 0 }; i < numSamples; ++i)
+        {
+            const float phi{ 2.0f * M_PI * fmod(haltonSeqPhi[shadeInfo.CurrentPixelSample() + i] + phiOffset, 1.0f) };
+            //const float cosTheta{ fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f) };
+            const float cosTheta{ sqrt(fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f)) };
+            const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
+
+            const float x{ sinTheta * cos(phi) };
+            const float y{ sinTheta * sin(phi) };
+            const float z{ cosTheta };
+
+            Vec3f u, v;
+            normal.GetOrthonormals(u, v);
+            const Vec3f monteWorldDir{ (x * u) + (y * v) + (z * normal) };
+            const Ray monteRay{ shadeInfo.P() + monteWorldDir * 0.0002f, monteWorldDir };
+
+            float dist;
+            //colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor * cosTheta * 2.0f;
+            colorSum += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
+        }
+        finalColor += colorSum / static_cast<float>(numSamples);
     }
 
     // Reflections

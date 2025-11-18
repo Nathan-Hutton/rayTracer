@@ -292,6 +292,7 @@ int main()
     // Fill in photon map
 
     // In this case, just record first bounce
+    // TODO: Terminate when it hits anything. Only record if IsPhotonSurface()
     if (!doingIndirectWithPhotonMapping && doingDirectWithPhotonMapping)
     {
         const Light* light{ renderer.GetScene().lights[0] };
