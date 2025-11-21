@@ -47,7 +47,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     }
 
     // Using photon maps
-    if (monteCarloWithPhoton && shadeInfo.CurrentBounce() < 1)
+    if (monteCarloWithPhoton)
     {
         if (IsPhotonSurface())
         {
@@ -69,17 +69,26 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
                 const Vec3f monteWorldDir{ (x * u) + (y * v) + (z * normal) };
                 const Ray monteRay{ shadeInfo.P() + monteWorldDir * 0.0002f, monteWorldDir };
 
-                float dist;
-                finalColor += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
+                //float dist;
+                //finalColor += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
 
-                //HitInfo hInfo;
-                //if (renderer.TraceRay(monteRay, hInfo))
-                //{
-                //    Color lightIntensity;
-                //    Vec3f lightDir;
-                //    renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 3.0f, hInfo.p, hInfo.N, 1.0f);
-                //    finalColor += (1.0f / M_PI) * lightIntensity * diffuseColor;
-                //}
+                HitInfo hInfo;
+                if (renderer.TraceRay(monteRay, hInfo))
+                {
+                    Color lightIntensity;
+                    Vec3f lightDir;
+                    renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 3.0f, hInfo.p, hInfo.N, 1.0f);
+                    //finalColor += (1.0f / M_PI) * lightIntensity * diffuseColor * static_cast<const MtlBlinn*>(hInfo.node->GetMaterial())->Diffuse().GetValue();
+                    //std::cout << (dynamic_cast<const MtlBlinn*>(hInfo.node->GetMaterial()) == nullptr) << '\n';
+                    //std::cout << (hInfo.node == nullptr) << '\n';
+                    //std::cout << (dynamic_cast<const MtlBlinn*>(hInfo.node->GetMaterial()) == nullptr) << '\n';
+                    if (hInfo.light)
+                        finalColor += diffuseColor / static_cast<float>(numSamples);
+                    else
+                        finalColor += ((1.0f / M_PI) * lightIntensity * diffuseColor * dynamic_cast<const MtlBlinn*>(hInfo.node->GetMaterial())->Diffuse().GetValue()) / static_cast<float>(numSamples);
+
+                    //finalColor += (1.0f / M_PI) * lightIntensity * diffuseColor;
+                }
             }
         }
     }

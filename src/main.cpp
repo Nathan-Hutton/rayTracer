@@ -263,7 +263,7 @@ int main()
 {
     renderer.LoadScene("../assets/scene.xml");
     PhotonMap photonMap{};
-    photonMap.Resize(100000);
+    photonMap.Resize(10000);
     renderer.SetPhotonMap(&photonMap);
 
     PhotonMap causticsMap{};
@@ -292,7 +292,7 @@ int main()
     // Fill in photon map
 
     // Direct only
-    if (!doingIndirectWithPhotonMapping && doingDirectWithPhotonMapping)
+    if (!(doingIndirectWithPhotonMapping && doingDirectWithPhotonMapping) || monteCarloWithPhoton)
     {
         const Light* light{ renderer.GetScene().lights[0] };
         while (true)
