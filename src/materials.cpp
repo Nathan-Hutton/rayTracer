@@ -51,7 +51,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     {
         Color lightIntensity;
         Vec3f lightDir;
-        renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.5f);
+        renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 3.0f, shadeInfo.P(), normal, 0.5f);
 
         if (IsPhotonSurface())
             finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
@@ -69,7 +69,7 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     {
         Color lightIntensity;
         Vec3f lightDir;
-        renderer.GetCausticsMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 1.0f, shadeInfo.P(), normal, 0.5f);
+        renderer.GetCausticsMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 3.0f, shadeInfo.P(), normal, 0.5f);
 
         if (IsPhotonSurface())
             finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;

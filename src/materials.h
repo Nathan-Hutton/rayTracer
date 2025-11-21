@@ -99,6 +99,9 @@ public:
             si.lobe = DirSampler::Lobe::DIFFUSE;
             si.mult = diffuse.GetValue();
             si.prob = diffuseProb;
+            //const float geometryTerm{ sInfo.N() % sInfo.V() };
+            //si.mult = diffuse.GetValue() * geometryTerm / M_PI;
+            //si.prob /= 2.0f * M_PI;
 
             // Direction
             const float r1{ sInfo.RandomFloat() };

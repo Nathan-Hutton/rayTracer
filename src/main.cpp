@@ -291,8 +291,7 @@ int main()
 
     // Fill in photon map
 
-    // In this case, just record first bounce
-    // TODO: Terminate when it hits anything. Only record if IsPhotonSurface()
+    // Direct only
     if (!doingIndirectWithPhotonMapping && doingDirectWithPhotonMapping)
     {
         const Light* light{ renderer.GetScene().lights[0] };
@@ -315,6 +314,7 @@ int main()
                 break;
         }
     }
+    // Direct + indirect
     else if (doingIndirectWithPhotonMapping && doingDirectWithPhotonMapping)
     {
         const Light* light{ renderer.GetScene().lights[0] };
@@ -354,6 +354,7 @@ int main()
             }
         }
     }
+    // Indirect. No direct
     else if (doingIndirectWithPhotonMapping)
     {
         const Light* light{ renderer.GetScene().lights[0] };
@@ -383,7 +384,7 @@ int main()
 
                 if (firstHit)
                 {
-                    if (!bounce)
+                    if (!bounce || (doingCaustics && info.lobe != DirSampler::Lobe::DIFFUSE))
                         break;
 
                     firstHit = false;
