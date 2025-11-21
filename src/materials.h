@@ -100,7 +100,7 @@ public:
             si.mult = diffuse.GetValue();
             si.prob = diffuseProb;
             //const float geometryTerm{ sInfo.N() % sInfo.V() };
-            //si.mult = diffuse.GetValue() * geometryTerm / M_PI;
+            //si.mult = diffuse.GetValue() * geometryTerm / static_cast<float>(M_PI);
             //si.prob /= 2.0f * M_PI;
 
             // Direction
@@ -121,7 +121,6 @@ public:
         if (randomNum < diffuseProb + specularProb)
         {
             si.lobe = DirSampler::Lobe::SPECULAR;
-            si.mult = specular.GetValue();
             si.prob = specularProb;
 
             // Direction
@@ -140,6 +139,7 @@ public:
             const Vec3f h{ (x * u) + (y * v) + (z * sInfo.N()) };
 
             dir = h * 2 * sInfo.V().Dot(h) - sInfo.V();
+            si.mult = specular.GetValue() * dir.Dot(sInfo.N());
             return dir.Dot(sInfo.N()) > 0.0f;
         }
         if (randomNum < diffuseProb + specularProb + transmissiveProb)
@@ -175,7 +175,6 @@ public:
             {
                 si.lobe = DirSampler::Lobe::SPECULAR;
                 si.mult = refraction.GetValue();
-                si.prob = 1.0f;
 
                 const Vec3f V{ sInfo.V() };
                 dir = h * 2 * V.Dot(h) - V;

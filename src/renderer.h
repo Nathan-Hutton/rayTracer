@@ -27,6 +27,7 @@
 const extern bool doingDirectWithPhotonMapping;
 const extern bool doingIndirectWithPhotonMapping;
 const extern bool doingCaustics;
+const extern bool monteCarloWithPhoton;
 
 //-------------------------------------------------------------------------------
 

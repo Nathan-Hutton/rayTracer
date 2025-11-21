@@ -113,8 +113,6 @@ public:
 
 	void  RandomPhoton( RNG &rng, Ray &r, Color &c ) const override
     {
-        c = intensity * 4.0f * M_PI * size * size;
-
         // Ray pos
         float randU{ rng.RandomFloat() };
         float randV{ rng.RandomFloat() };
@@ -143,6 +141,8 @@ public:
         const Vec3f dir{ (dirX * u) + (dirY * v) + (dirZ * norm) };
 
         r.dir = dir;
+
+        c = intensity * 8.0f * M_PI * size * size * cosTheta;
     }
 
 	void  SetViewportLight( int lightID ) const override;
