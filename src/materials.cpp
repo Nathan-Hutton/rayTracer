@@ -47,62 +47,14 @@ Color MtlBlinn::Shade(ShadeInfo const &shadeInfo) const
     }
 
     // Using photon maps
-    if (monteCarloWithPhoton)
+    if ((doingDirectWithPhotonMapping || doingIndirectWithPhotonMapping) && (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f))
     {
+        Color lightIntensity;
+        Vec3f lightDir;
+        renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 3.0f, shadeInfo.P(), normal, 1.0f);
+
         if (IsPhotonSurface())
-        {
-            const float phiOffset{ shadeInfo.RandomFloat() };
-            const float thetaOffset{ shadeInfo.RandomFloat() };
-            constexpr size_t numSamples{ 1 };
-            for (size_t i{ 0 }; i < numSamples; ++i)
-            {
-                const float phi{ 2.0f * M_PI * fmod(haltonSeqPhi[shadeInfo.CurrentPixelSample() + i] + phiOffset, 1.0f) };
-                const float cosTheta{ sqrt(fmod(haltonSeqTheta[shadeInfo.CurrentPixelSample() + i] + thetaOffset, 1.0f)) };
-                const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
-
-                const float x{ sinTheta * cos(phi) };
-                const float y{ sinTheta * sin(phi) };
-                const float z{ cosTheta };
-
-                Vec3f u, v;
-                normal.GetOrthonormals(u, v);
-                const Vec3f monteWorldDir{ (x * u) + (y * v) + (z * normal) };
-                const Ray monteRay{ shadeInfo.P() + monteWorldDir * 0.0002f, monteWorldDir };
-
-                //float dist;
-                //finalColor += shadeInfo.TraceSecondaryRay(monteRay, dist) * diffuseColor;
-
-                HitInfo hInfo;
-                if (renderer.TraceRay(monteRay, hInfo))
-                {
-                    Color lightIntensity;
-                    Vec3f lightDir;
-                    renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 3.0f, hInfo.p, hInfo.N, 1.0f);
-                    //finalColor += (1.0f / M_PI) * lightIntensity * diffuseColor * static_cast<const MtlBlinn*>(hInfo.node->GetMaterial())->Diffuse().GetValue();
-                    //std::cout << (dynamic_cast<const MtlBlinn*>(hInfo.node->GetMaterial()) == nullptr) << '\n';
-                    //std::cout << (hInfo.node == nullptr) << '\n';
-                    //std::cout << (dynamic_cast<const MtlBlinn*>(hInfo.node->GetMaterial()) == nullptr) << '\n';
-                    if (hInfo.light)
-                        finalColor += diffuseColor / static_cast<float>(numSamples);
-                    else
-                        finalColor += ((1.0f / M_PI) * lightIntensity * diffuseColor * dynamic_cast<const MtlBlinn*>(hInfo.node->GetMaterial())->Diffuse().GetValue()) / static_cast<float>(numSamples);
-
-                    //finalColor += (1.0f / M_PI) * lightIntensity * diffuseColor;
-                }
-            }
-        }
-    }
-    else
-    {
-        if ((doingDirectWithPhotonMapping || doingIndirectWithPhotonMapping) && (IsPhotonSurface() || specular.GetValue().Sum() > 0.0f))
-        {
-            Color lightIntensity;
-            Vec3f lightDir;
-            renderer.GetPhotonMap()->EstimateIrradiance<128>(lightIntensity, lightDir, 3.0f, shadeInfo.P(), normal, 1.0f);
-
-            if (IsPhotonSurface())
-                finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
-        }
+            finalColor += (1.0f / M_PI) * diffuseColor * lightIntensity;
     }
 
     // Using Caustics

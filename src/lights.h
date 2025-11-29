@@ -2,7 +2,7 @@
 ///
 /// \file       lights.h 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    12.0
+/// \version    13.0
 /// \date       October 25, 2025
 ///
 /// \brief Example source for CS 6620 - University of Utah.
@@ -13,7 +13,6 @@
 #define _LIGHTS_H_INCLUDED_
 
 #include "renderer.h"
-#include <iostream>
 
 //-------------------------------------------------------------------------------
 
@@ -28,14 +27,19 @@ protected:
 class AmbientLight : public GenLight
 {
 public:
+#ifdef LEGACY_SHADING_API
 	Color Illuminate( ShadeInfo const &sInfo, Vec3f &dir ) const override { return intensity; }
+#endif
 	Color Intensity() const override { return intensity; }
 	bool  IsAmbient() const override { return true; }
 	void  SetViewportLight( int lightID ) const override { SetViewportParam(lightID,ColorA(intensity),ColorA(0.0f),Vec4f(0,0,0,1)); }
 	void  Load( Loader const &loader ) override;
 
-    bool IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const override { return false; }
-    bool IntersectShadowRay( Ray const &localRay, float t_max ) const override { return false; }
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override
+	{
+		si.prob=1; si.mult=intensity; si.dist=0; dir=sInfo.N(); si.lobe=DirSampler::Lobe::ALL; return true;
+	}
+
 protected:
 	Color intensity = Color(0,0,0);
 };
@@ -45,13 +49,18 @@ protected:
 class DirectLight : public GenLight
 {
 public:
+#ifdef LEGACY_SHADING_API
 	Color Illuminate( ShadeInfo const &sInfo, Vec3f &dir ) const override { dir=-direction; return intensity * sInfo.TraceShadowRay(-direction); }
+#endif
 	Color Intensity() const override { return intensity; }
 	void  SetViewportLight( int lightID ) const override { SetViewportParam(lightID,ColorA(0.0f),ColorA(intensity),Vec4f(-direction,0.0f)); }
 	void  Load( Loader const &loader ) override;
 
-    bool IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const override { return false; }
-    bool IntersectShadowRay( Ray const &localRay, float t_max ) const override { return false; }
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override
+	{
+		si.prob=1; si.mult=intensity; si.dist=BIGFLOAT; dir=-direction; si.lobe=DirSampler::Lobe::ALL; return true;
+	}
+
 protected:
 	Color intensity = Color(0,0,0);
 	Vec3f direction = Vec3f(0,0,0);
@@ -61,51 +70,10 @@ protected:
 
 class PointLight : public GenLight
 {
-private:
-    HaltonSeq<static_cast<int>(16)> diskHaltonSeqTheta{ 5 };
-    HaltonSeq<static_cast<int>(16)> diskHaltonSeqRadius{ 7 };
-
 public:
-	Color Illuminate( ShadeInfo const &sInfo, Vec3f &dir ) const override 
-    { 
-        Vec3f d{ position - sInfo.P() };
-        const float distSquared{ d.LengthSquared() };
-        dir = d.GetNormalized();
-
-        Vec3f u;
-        Vec3f v;
-        dir.GetOrthonormals(u, v);
-
-        const float offsetX{ sInfo.RandomFloat() };
-        const float offsetY{ sInfo.RandomFloat() };
-
-        constexpr size_t minNumSamples{ 4 };
-        constexpr size_t maxNumSamples{ 64 };
-        size_t numHits{ 0 };
-        size_t numSamples{ 0 };
-        for (size_t i{ 0 }; i < maxNumSamples; ++i)
-        {
-            const float jitterTheta{ fmod(offsetX + diskHaltonSeqTheta[i], 1.0f) };
-            const float jitterRadius{ fmod(offsetY + diskHaltonSeqRadius[i], 1.0f) };
-
-            const float diskTheta{ jitterTheta * 2.0f * M_PI };
-            const float diskRadius{ sqrt(jitterRadius) };
-
-            const float x{ diskRadius * cos(diskTheta) };
-            const float y{ diskRadius * sin(diskTheta) };
-            const Vec3f destination{ position + ((x * size) * u) + (y * size) * v };
-
-            const Vec3f sampleRayDir{ destination - sInfo.P() };
-
-            if (sInfo.TraceShadowRay(sampleRayDir, 1.0f) == 1.0f)
-                ++numHits;
-
-            if (i + 1 == minNumSamples && (numHits == 0 || numHits == minNumSamples))
-                return (intensity * static_cast<float>(numHits) / minNumSamples) / distSquared;
-        }
-
-        return (intensity * static_cast<float>(numHits) / maxNumSamples) / distSquared;
-    }
+#ifdef LEGACY_SHADING_API
+	Color Illuminate( ShadeInfo const &sInfo, Vec3f &dir ) const override;
+#endif
 	Color Radiance( SamplerInfo const &sInfo ) const override { return intensity / (Pi<float>()*size*size); }
 	Color Intensity     () const override { return intensity; }
 	bool  IsRenderable  () const override { return size > 0.0f; }
@@ -226,6 +194,9 @@ public:
 
 	Box  GetBoundBox() const override { return Box( position-size, position+size ); }
 	void ViewportDisplay( Material const *mtl ) const override;	// used for OpenGL display
+
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override;
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override;
 
 protected:
 	Color intensity   = Color(0,0,0);

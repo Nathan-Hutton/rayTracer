@@ -2,7 +2,7 @@
 ///
 /// \file       materials.h 
 /// \author     Cem Yuksel (www.cemyuksel.com)
-/// \version    12.0
+/// \version    13.0
 /// \date       October 25, 2025
 ///
 /// \brief Example source for CS 6620 - University of Utah.
@@ -13,7 +13,6 @@
 #define _MATERIALS_H_INCLUDED_
 
 #include "renderer.h"
-#include <iostream>
 
 //-------------------------------------------------------------------------------
 
@@ -65,10 +64,13 @@ protected:
 class MtlPhong : public MtlBasePhongBlinn
 {
 public:
+#ifdef LEGACY_SHADING_API
 	Color Shade( ShadeInfo const &shadeInfo ) const override;
+#endif
 	void SetViewportMaterial( int mtlID=0 ) const override;	// used for OpenGL display
 
-	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override;
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override;
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override;
 };
 
 //-------------------------------------------------------------------------------
@@ -76,7 +78,9 @@ public:
 class MtlBlinn : public MtlBasePhongBlinn
 {
 public:
+#ifdef LEGACY_SHADING_API
 	Color Shade( ShadeInfo const &shadeInfo ) const override;
+#endif
 	void SetViewportMaterial ( int mtlID=0 ) const override;	// used for OpenGL display
 
 	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override 
@@ -147,7 +151,7 @@ public:
             const Vec3f N{ sInfo.IsFront() ? sInfo.N() : -sInfo.N() };
 
             si.lobe = DirSampler::Lobe::TRANSMISSION;
-            si.mult = refraction.GetValue();
+            //si.mult = refraction.GetValue();
             si.prob = transmissiveProb;
             
             // Direction
@@ -174,22 +178,25 @@ public:
             if (sinTheta_t_sq > 1.0f)
             {
                 si.lobe = DirSampler::Lobe::SPECULAR;
-                si.mult = refraction.GetValue();
 
                 const Vec3f V{ sInfo.V() };
                 dir = h * 2 * V.Dot(h) - V;
+                si.mult = refraction.GetValue() * std::abs(dir.Dot(sInfo.N()));
                 return dir.Dot(N) > 0.0f;
             }
 
             const float cosTheta_t{ sqrtf(1.0f - sinTheta_t_sq) };
 
             dir = -V * refractionRatio + h * (refractionRatio * cosTheta_i - cosTheta_t);
+            si.mult = refraction.GetValue() * std::abs(dir.Dot(sInfo.N()));
 
             return dir.Dot(N) < 0.0f;
         }
         return false;
 
     }
+
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override;
 };
 
 //-------------------------------------------------------------------------------
@@ -213,13 +220,16 @@ public:
 	void SetEmissionTexture     ( TextureMap *tex ) { emission     .SetTexture(tex); }
 	void SetTransmittanceTexture( TextureMap *tex ) { transmittance.SetTexture(tex); }
 
+#ifdef LEGACY_SHADING_API
 	Color Shade( ShadeInfo const &shadeInfo ) const override;
+#endif
 	Color Absorption         ( int mtlID=0 ) const override { return absorption; }
 	float IOR                ( int mtlID=0 ) const override { return ior;        }
 	bool  IsPhotonSurface    ( int mtlID=0 ) const override { return baseColor.GetValue().Sum() > 0; }
 	void  SetViewportMaterial( int mtlID=0 ) const override;	// used for OpenGL display
 
-	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override;
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override;
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override;
 
 private:
 	TexturedColor baseColor     = Color(0.5f);	// albedo for dielectrics, F0 for metals
@@ -238,7 +248,9 @@ class MultiMtl : public Material
 public:
 	virtual ~MultiMtl() { for ( Material *m : mtls ) delete m; }
 
-	Color Shade( ShadeInfo const &sInfo ) const override { int m=sInfo.MaterialID(); return m<(int)mtls.size() ? mtls[m]->Shade(sInfo) : Color(1,1,1); }
+#ifdef LEGACY_SHADING_API
+	Color Shade( ShadeInfo const &sInfo ) const override { int m = sInfo.MaterialID(); return m<(int)mtls.size() ? mtls[m]->Shade(sInfo) : Color(1,1,1); }
+#endif
 	Color Absorption         ( int mtlID=0 ) const override { return mtlID<(int)mtls.size() ? mtls[mtlID]->Absorption     (mtlID) : Material::Absorption     (mtlID); }
 	float IOR                ( int mtlID=0 ) const override { return mtlID<(int)mtls.size() ? mtls[mtlID]->IOR            (mtlID) : Material::IOR            (mtlID); }
 	bool  IsPhotonSurface    ( int mtlID=0 ) const override { return mtlID<(int)mtls.size() ? mtls[mtlID]->IsPhotonSurface(mtlID) : Material::IsPhotonSurface(mtlID); }
@@ -251,6 +263,14 @@ public:
 		int m = sInfo.MaterialID();
 		if ( m < (int)mtls.size() ) return mtls[m]->GenerateSample(sInfo,dir,si);
 		else return Material::GenerateSample(sInfo,dir,si);
+	}
+
+	// Set the material sample information for the given direction sample.
+	void GetSampleInfo( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override
+	{
+		int m = sInfo.MaterialID();
+		if ( m < (int)mtls.size() ) mtls[m]->GetSampleInfo(sInfo,dir,si);
+		else Material::GetSampleInfo(sInfo,dir,si);
 	}
 
 private:
