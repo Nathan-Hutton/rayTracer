@@ -208,6 +208,8 @@ protected:
 	Scene       scene;
 	Camera      camera;
 	RenderImage renderImage;
+    PhotonMap* photonMap;
+    PhotonMap* causticsMap;
 	std::string sceneFile;
 	bool isRendering = false;
 

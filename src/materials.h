@@ -69,8 +69,8 @@ public:
 #endif
 	void SetViewportMaterial( int mtlID=0 ) const override;	// used for OpenGL display
 
-	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override;
-	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override;
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override{};
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override{};
 };
 
 //-------------------------------------------------------------------------------
@@ -196,7 +196,7 @@ public:
 
     }
 
-	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override;
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override{};
 };
 
 //-------------------------------------------------------------------------------
@@ -228,8 +228,8 @@ public:
 	bool  IsPhotonSurface    ( int mtlID=0 ) const override { return baseColor.GetValue().Sum() > 0; }
 	void  SetViewportMaterial( int mtlID=0 ) const override;	// used for OpenGL display
 
-	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override;
-	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override;
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override{};
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override{};
 
 private:
 	TexturedColor baseColor     = Color(0.5f);	// albedo for dielectrics, F0 for metals

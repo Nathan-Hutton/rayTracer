@@ -40,6 +40,9 @@ public:
 		si.prob=1; si.mult=intensity; si.dist=0; dir=sInfo.N(); si.lobe=DirSampler::Lobe::ALL; return true;
 	}
 
+    bool IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const override { return false; }
+    bool IntersectShadowRay( Ray const &localRay, float t_max ) const override { return false; }
+
 protected:
 	Color intensity = Color(0,0,0);
 };
@@ -60,6 +63,9 @@ public:
 	{
 		si.prob=1; si.mult=intensity; si.dist=BIGFLOAT; dir=-direction; si.lobe=DirSampler::Lobe::ALL; return true;
 	}
+
+    bool IntersectRay(const Ray& localRay, HitInfo& hitInfo, int hitSide) const override { return false; }
+    bool IntersectShadowRay( Ray const &localRay, float t_max ) const override { return false; }
 
 protected:
 	Color intensity = Color(0,0,0);
@@ -195,8 +201,8 @@ public:
 	Box  GetBoundBox() const override { return Box( position-size, position+size ); }
 	void ViewportDisplay( Material const *mtl ) const override;	// used for OpenGL display
 
-	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override;
-	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override;
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override { return false; }
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override {}
 
 protected:
 	Color intensity   = Color(0,0,0);
