@@ -201,7 +201,32 @@ public:
 	Box  GetBoundBox() const override { return Box( position-size, position+size ); }
 	void ViewportDisplay( Material const *mtl ) const override;	// used for OpenGL display
 
-	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override { return false; }
+	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override 
+    {
+        float randU{ sInfo.RandomFloat() };
+        float randV{ sInfo.RandomFloat() };
+        const float theta{ 2.0f * M_PI * randU };
+        const float posZ{ size * (1.0f - 2.0f * randV) };
+        const float rProj{ sqrtf(size * size - posZ * posZ) };
+        const float posX{ rProj * cos(theta) };
+        const float posY{ rProj * sin(theta) };
+        const Vec3f pos{ Vec3f{ posX, posY, posZ } + position };
+
+        dir = pos - sInfo.P();
+        si.dist = dir.Length();
+        dir.Normalize();
+
+        const Vec3f norm{ (pos - position).GetNormalized() };
+        const float cosThetaLight{ norm.Dot(-dir) };
+        if (cosThetaLight <= 0.0f)
+            return false;
+
+        si.mult = intensity * (cosThetaLight / (si.dist * si.dist));
+
+        si.prob = 1.0f / (4.0f * M_PI * size * size);
+
+        return true;
+    }
 	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override {}
 
 protected:

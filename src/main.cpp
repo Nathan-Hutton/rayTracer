@@ -1,6 +1,7 @@
 #include "scene.h"
 #include "lights.h"
 #include "renderer.h"
+#include "materials.h"
 #include "cyCore/cyVector.h"
 #include "cyCore/cyMatrix.h"
 #include "rng.h"
@@ -150,11 +151,71 @@ Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist, bool reflection
     newShadeInfo.SetHit(ray, hInfo);
     ++newShadeInfo.bounce;
     if (hInfo.light)
-        return Color{ 1.0f, 1.0f, 1.0f };
+        return hInfo.node->GetMaterial()->Emission();
 
     return hInfo.node->GetMaterial()->Shade(newShadeInfo);
 }
 #endif
+
+Color tracePath(const Ray& ray)
+{
+    Color throughput{ 1.0f };
+    Color result{ 0.0f };
+    constexpr size_t maxBounces{ 5 };
+    const Light* light{ renderer.GetScene().lights[0] };
+
+    for (size_t bounce{ 0 }; bounce < maxBounces; ++bounce)
+    {
+        HitInfo hInfo{};
+        if (!renderer.TraceRay(ray, hInfo))
+        {
+            const Color c{ renderer.GetScene().background.Eval(ray.dir) };
+            result += c * throughput;
+            return result;
+        }
+
+        if (hInfo.light)
+        {
+            if (bounce == 0)
+                result += light->Intensity() * throughput;
+            return result;
+        }
+
+        const MtlBasePhongBlinn* material{ static_cast<const MtlBasePhongBlinn*>(hInfo.node->GetMaterial()) };
+
+        // Next event estimation
+        SamplerInfo sInfo{ tileThreads::rng };
+        sInfo.SetHit(ray, hInfo);
+
+        DirSampler::Info nextEventInfo;
+        Vec3f nextEventShadowDir;
+        if (light->GenerateSample(sInfo, nextEventShadowDir, nextEventInfo))
+        {
+            const Ray nextEventShadowRay{ hInfo.p + hInfo.N * 0.0002f, nextEventShadowDir };
+            if (!renderer.TraceShadowRay(nextEventShadowRay, nextEventInfo.dist))
+            {
+                const float geometryTerm{ std::max(0.0f, hInfo.N.Dot(nextEventShadowDir)) };
+                if (geometryTerm > 0.0f && nextEventInfo.prob > 0.0f)
+                {
+                    const Color diffuse{ material->Diffuse().GetValue() };
+                    const Color specular{ material->Specular().GetValue() };
+                    const float gloss{ material->Glossiness().GetValue() };
+
+                    Color brdf{ diffuse * (1.0f / M_PI) };
+
+                    const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
+                    const float blinnTerm{ std::max(0.0f, hInfo.N.Dot(h)) };
+                    if (blinnTerm > 0.0f)
+                        brdf += specular * ((gloss + 2.0f) / (8.0f * M_PI)) * pow(blinnTerm, gloss);
+
+                    result += ((nextEventInfo.mult * brdf * geometryTerm) / nextEventInfo.prob) * throughput;
+                }
+            }
+        }
+
+        return result;
+    }
+}
 
 // Adaptive
 void threadRenderTiles()
@@ -214,22 +275,34 @@ void threadRenderTiles()
                     HitInfo hitInfo{};
                     //ShadeInfo sInfo{ renderer.GetScene().lights, renderer.GetScene().environment, tileThreads::rng };
                     //sInfo.SetPixelSample(i);
-                    if (renderer.TraceRay(worldRay, hitInfo))
-                    {
-                        //sInfo.SetHit(worldRay, hitInfo);
-                        //const Color c{ hitInfo.light ? Color{ 1.0f, 1.0f, 1.0f } : hitInfo.node->GetMaterial()->Shade(sInfo) };
-                        const Color c{ 1.0f };
-                        colorSum += c;
-                        colorSumSquared += c * c;
-                    }
-                    else
-                    {
-                        const float u{ (static_cast<float>(i) + tileThreads::aaHaltonSeqX[k]) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
-                        const float v{ (static_cast<float>(j) + tileThreads::aaHaltonSeqY[k]) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
-                        const Color c{ renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) };
-                        colorSum += c;
-                        colorSumSquared += c * c;
-                    }
+                    const Color c{ tracePath(worldRay) };
+                    colorSum += c;
+                    colorSumSquared += c * c;
+                    //if (renderer.TraceRay(worldRay, hitInfo))
+                    //{
+                    //    if (hitInfo.light)
+                    //    {
+                    //        const Color c{ 1.0f };
+                    //        colorSum += c;
+                    //        colorSumSquared += c * c;
+                    //    }
+                    //    else
+                    //    {
+                    //        //sInfo.SetHit(worldRay, hitInfo);
+                    //        //const Color c{ hitInfo.light ? Color{ 1.0f, 1.0f, 1.0f } : hitInfo.node->GetMaterial()->Shade(sInfo) };
+                    //        // TODO: Path tracing algorithm
+                    //        colorSum += c;
+                    //        colorSumSquared += c * c;
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    const float u{ (static_cast<float>(i) + tileThreads::aaHaltonSeqX[k]) / static_cast<float>(renderer.GetCamera().imgWidth - 1) };
+                    //    const float v{ (static_cast<float>(j) + tileThreads::aaHaltonSeqY[k]) / static_cast<float>(renderer.GetCamera().imgHeight - 1) };
+                    //    const Color c{ renderer.GetScene().background.Eval( Vec3f{ u, v, 1.0f } ) };
+                    //    colorSum += c;
+                    //    colorSumSquared += c * c;
+                    //}
 
                     if (sampleCount < minNumSamples)
                         continue;
