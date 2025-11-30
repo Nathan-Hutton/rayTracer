@@ -161,8 +161,10 @@ Color tracePath(Ray ray)
 {
     Color throughput{ 1.0f };
     Color result{ 0.0f };
-    constexpr size_t maxBounces{ 5 };
+    constexpr size_t maxBounces{ 10 };
     const Light* light{ renderer.GetScene().lights[0] };
+
+    float lastBounceProb{ 0.0f };
 
     for (size_t bounce{ 0 }; bounce < maxBounces; ++bounce)
     {
@@ -177,7 +179,23 @@ Color tracePath(Ray ray)
         if (hInfo.light)
         {
             if (bounce == 0)
+            {
                 result += light->Intensity() * throughput;
+            }
+            else
+            {
+                //const float distSquared{ powf((hInfo.p - ray.p).Length(), 2.0f) };
+                const float distSquared{ hInfo.z * hInfo.z };
+                const float cosThetaLight{ std::max(1e-4f, hInfo.N.Dot(-ray.dir)) };
+                const float lightAreaPDF{ 1.0f / (4.0f * M_PI * 1.0f * 1.0f) }; // Ignore the size being 1.0f, it's okay for this project
+                const float lightSolidPDF{ lightAreaPDF * (distSquared / cosThetaLight) };
+
+                const float lastBouncePDFSquared{ lastBounceProb * lastBounceProb };
+                const float lightSolidPDFSquared{ lightSolidPDF * lightSolidPDF };
+                const float weight{ lastBouncePDFSquared / (lastBouncePDFSquared + lightSolidPDFSquared) };
+
+                result += light->Intensity() * throughput * weight;
+            }
             return result;
         }
 
@@ -190,8 +208,10 @@ Color tracePath(Ray ray)
         Vec3f nextEventShadowDir;
         if (light->GenerateSample(sInfo, nextEventShadowDir, nextEventInfo))
         {
-            const Ray nextEventShadowRay{ hInfo.p + hInfo.N * 0.0002f, nextEventShadowDir };
-            if (!renderer.TraceShadowRay(nextEventShadowRay, nextEventInfo.dist))
+            const float sign{ (hInfo.N.Dot(nextEventShadowDir) > 0.0f) ? 1.0f : -1.0f };
+            //const Ray nextEventShadowRay{ hInfo.p + hInfo.N * 0.0002f, nextEventShadowDir };
+            const Ray nextEventShadowRay{ hInfo.p + (hInfo.N * 0.0002f * sign), nextEventShadowDir };
+            if (!renderer.TraceShadowRay(nextEventShadowRay, nextEventInfo.dist - 0.0002f))
             {
                 const float geometryTerm{ std::max(0.0f, hInfo.N.Dot(nextEventShadowDir)) };
                 if (geometryTerm > 0.0f && nextEventInfo.prob > 0.0f)
@@ -200,14 +220,26 @@ Color tracePath(Ray ray)
                     const Color specular{ material->Specular().GetValue() };
                     const float gloss{ material->Glossiness().GetValue() };
 
-                    Color brdf{ diffuse * (1.0f / M_PI) };
+                    //Color brdf{ diffuse / M_PI };
+                    Color brdf{ diffuse };
 
                     const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
                     const float blinnTerm{ std::max(0.0f, hInfo.N.Dot(h)) };
                     if (blinnTerm > 0.0f)
                         brdf += specular * ((gloss + 2.0f) / (8.0f * M_PI)) * pow(blinnTerm, gloss);
 
-                    result += ((nextEventInfo.mult * brdf * geometryTerm) / nextEventInfo.prob) * throughput;
+                    DirSampler::Info shadowDirSampleInfo;
+                    material->GetSampleInfo(sInfo, nextEventShadowDir, shadowDirSampleInfo);
+
+                    const float distSq{ nextEventInfo.dist * nextEventInfo.dist };
+                    const float denom{ std::max(1e-5f, nextEventInfo.mult.Gray()) };
+                    const float conversionFormula{ light->Intensity().Gray() / denom };
+                    const float lightSolidProb{ nextEventInfo.prob * conversionFormula };
+                    const float nextEventProbSquared{ lightSolidProb * lightSolidProb };
+                    const float shadowDirSampleProbSquared{ shadowDirSampleInfo.prob * shadowDirSampleInfo.prob };
+                    const float weight{ nextEventProbSquared / (nextEventProbSquared + shadowDirSampleProbSquared) };
+
+                    result += ((nextEventInfo.mult * brdf * geometryTerm) / nextEventInfo.prob) * weight * throughput;
                 }
             }
         }
@@ -218,22 +250,24 @@ Color tracePath(Ray ray)
         if (!material->GenerateSample(sInfo, bounceDir, indirectLightingInfo))
             break; // Total internal reflection
 
+        lastBounceProb = indirectLightingInfo.prob;
+
         ray.dir = bounceDir;
-        ray.p = hInfo.p + bounceDir * 0.0002f;
+        //ray.p = hInfo.p + bounceDir * 0.0002f;
+        //ray.p = hInfo.p + hInfo.N * 0.001f;
+        const float sign{ (hInfo.N.Dot(bounceDir) > 0.0f) ? 1.0f : -1.0f };
+        ray.p = hInfo.p + (hInfo.N * 0.0002f * sign);
 
         throughput *= indirectLightingInfo.mult;
 
         if (bounce > 2)
         {
             const float prob{ throughput.Max() };
-            if (prob < tileThreads::rng.RandomFloat())
+            if (tileThreads::rng.RandomFloat() > prob)
                 break;
 
             throughput /= prob;
         }
-
-        //material->GetSampleInfo(sInfo, ray.dir, indirectLightingInfo);
-
     }
 
     return result;

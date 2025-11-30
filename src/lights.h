@@ -13,6 +13,7 @@
 #define _LIGHTS_H_INCLUDED_
 
 #include "renderer.h"
+#include <iostream>
 
 //-------------------------------------------------------------------------------
 
