@@ -231,7 +231,6 @@ Color tracePath(Ray ray)
                     DirSampler::Info shadowDirSampleInfo;
                     material->GetSampleInfo(sInfo, nextEventShadowDir, shadowDirSampleInfo);
 
-                    const float distSq{ nextEventInfo.dist * nextEventInfo.dist };
                     const float denom{ std::max(1e-5f, nextEventInfo.mult.Gray()) };
                     const float conversionFormula{ light->Intensity().Gray() / denom };
                     const float lightSolidProb{ nextEventInfo.prob * conversionFormula };

@@ -342,6 +342,18 @@ public:
         float diffuseProb{ diffuse.GetValue().Gray() };
         float specularProb{ specular.GetValue().Gray() };
         float transmissiveProb{ refraction.GetValue().Gray() };
+
+        if (transmissiveProb > 0.0f) {
+            const float R0{ 0.04f };
+            // Note: Use sInfo.V() (View Vector) and sInfo.N() (Normal) for Fresnel
+            const float cosTheta{ std::abs(sInfo.N().Dot(sInfo.V())) };
+            const float F{ R0 + (1.0f - R0) * powf(1.0f - cosTheta, 5.0f) };
+            
+            const float totalSpecTrans{ specularProb + transmissiveProb };
+            specularProb = totalSpecTrans * F;
+            transmissiveProb = totalSpecTrans * (1.0f - F);
+        }
+
         const float totalProb{ diffuseProb + specularProb + transmissiveProb };
         diffuseProb /= totalProb;
         specularProb /= totalProb;
