@@ -35,6 +35,7 @@ public:
 	bool  IsAmbient() const override { return true; }
 	void  SetViewportLight( int lightID ) const override { SetViewportParam(lightID,ColorA(intensity),ColorA(0.0f),Vec4f(0,0,0,1)); }
 	void  Load( Loader const &loader ) override;
+    float GetSize() const override { return 0.0f; };
 
 	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override
 	{
@@ -59,6 +60,7 @@ public:
 	Color Intensity() const override { return intensity; }
 	void  SetViewportLight( int lightID ) const override { SetViewportParam(lightID,ColorA(0.0f),ColorA(intensity),Vec4f(-direction,0.0f)); }
 	void  Load( Loader const &loader ) override;
+    float GetSize() const override { return 0.0f; };
 
 	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override
 	{
@@ -85,6 +87,7 @@ public:
 	Color Intensity     () const override { return intensity; }
 	bool  IsRenderable  () const override { return size > 0.0f; }
 	bool  IsPhotonSource() const override { return true; }
+    float GetSize() const override { return size; };
 
 	void  RandomPhoton( RNG &rng, Ray &r, Color &c ) const override
     {

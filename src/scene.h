@@ -266,6 +266,7 @@ public:
 	virtual void  RandomPhoton( RNG &rng, Ray &r, Color &c ) const {}
 	virtual void  SetViewportLight( int lightID ) const {}	// used for OpenGL display
 	virtual void  Load( Loader const &loader ) {}
+    virtual float GetSize() const {}
 
 	// From Object
 	bool IntersectRay( Ray const &ray, HitInfo &hInfo, int hitSide=HIT_FRONT ) const override { return false; }
