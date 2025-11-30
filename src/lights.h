@@ -222,7 +222,6 @@ public:
             return false;
 
         si.mult = intensity * (cosThetaLight / (si.dist * si.dist));
-
         si.prob = 1.0f / (4.0f * M_PI * size * size);
 
         return true;

@@ -157,7 +157,7 @@ Color ShadeInfo::TraceSecondaryRay( Ray const &ray, float &dist, bool reflection
 }
 #endif
 
-Color tracePath(const Ray& ray)
+Color tracePath(Ray ray)
 {
     Color throughput{ 1.0f };
     Color result{ 0.0f };
@@ -182,11 +182,10 @@ Color tracePath(const Ray& ray)
         }
 
         const MtlBasePhongBlinn* material{ static_cast<const MtlBasePhongBlinn*>(hInfo.node->GetMaterial()) };
-
-        // Next event estimation
         SamplerInfo sInfo{ tileThreads::rng };
         sInfo.SetHit(ray, hInfo);
 
+        // Next event estimation
         DirSampler::Info nextEventInfo;
         Vec3f nextEventShadowDir;
         if (light->GenerateSample(sInfo, nextEventShadowDir, nextEventInfo))
@@ -213,8 +212,31 @@ Color tracePath(const Ray& ray)
             }
         }
 
-        return result;
+        // Indirect bounce
+        Vec3f bounceDir;
+        DirSampler::Info indirectLightingInfo;
+        if (!material->GenerateSample(sInfo, bounceDir, indirectLightingInfo))
+            break; // Total internal reflection
+
+        ray.dir = bounceDir;
+        ray.p = hInfo.p + bounceDir * 0.0002f;
+
+        throughput *= indirectLightingInfo.mult;
+
+        if (bounce > 2)
+        {
+            const float prob{ throughput.Max() };
+            if (prob < tileThreads::rng.RandomFloat())
+                break;
+
+            throughput /= prob;
+        }
+
+        //material->GetSampleInfo(sInfo, ray.dir, indirectLightingInfo);
+
     }
+
+    return result;
 }
 
 // Adaptive
