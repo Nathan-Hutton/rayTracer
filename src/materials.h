@@ -227,18 +227,31 @@ public:
             // Direction
             const float r1{ sInfo.RandomFloat() };
             const float r2{ sInfo.RandomFloat() };
-            const float z{ sqrtf(r1) };
-            const float sinTheta{ sqrtf(1.0f - r1) };
-            const float phi{ 2.0f * M_PI * r2 };
-            const float x{ sinTheta * cos(phi) };
-            const float y{ sinTheta * sin(phi) };
+            const float cosTheta{ sqrtf(1.0f - r2) };
+            const float sinTheta{ sqrtf(r2) };
+            const float phi{ 2.0f * M_PI * r1 };
+            const Vec3f localDir{ sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta };
+            const Vec3f helper{ (std::abs(sInfo.N().x) > 0.9f) ? Vec3f{ 0.0f, 1.0f, 0.0f } : Vec3f{ 1.0f, 0.0f, 0.0f } };
+            const Vec3f tangent{ helper.Cross(sInfo.N()).GetNormalized() };
+            const Vec3f bitangent{ sInfo.N().Cross(tangent).GetNormalized() };
+            dir = (tangent * localDir.x) + (bitangent * localDir.y) + (sInfo.N() * localDir.z);
+            dir.Normalize();
+            si.prob = cosTheta * (1.0f / M_PI) * diffuseProb;
+            si.mult = diffuse.GetValue() * (cosTheta * (1.0f / M_PI));
+            //const float phi{ 2.0f * M_PI * r2 };
+            //const float z{ sqrtf(r1) };
+            //const float sinTheta{ sqrtf(1.0f - r1) };
+            //const float x{ sinTheta * cos(phi) };
+            //const float y{ sinTheta * sin(phi) };
 
-            Vec3f u, v;
-            sInfo.N().GetOrthonormals(u, v);
-            dir = (x * u) + (y * v) + (z * sInfo.N());
+            //Vec3f u, v;
+            //sInfo.N().GetOrthonormals(u, v);
+            //dir = (x * u) + (y * v) + (z * sInfo.N());
 
-            si.mult = diffuse.GetValue() / diffuseProb;
-            si.prob = diffuseProb * (z / static_cast<float>(M_PI));
+            ////si.mult = diffuse.GetValue() / diffuseProb;
+            //si.mult = diffuse.GetValue() / diffuseProb;
+            ////si.prob = diffuseProb * (z / static_cast<float>(M_PI));
+            //si.prob = diffuseProb * (z / static_cast<float>(M_PI));
 
             return true;
         }

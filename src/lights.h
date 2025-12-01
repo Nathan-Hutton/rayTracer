@@ -225,8 +225,8 @@ public:
         if (cosThetaLight <= 0.0f)
             return false;
 
-        si.mult = intensity * (cosThetaLight / (si.dist * si.dist));
-        si.prob = 1.0f / (4.0f * M_PI * size * size);
+        si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
+        si.prob = 2.0f / (4.0f * M_PI * size * size);
 
         return true;
     }
