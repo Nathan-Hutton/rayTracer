@@ -212,30 +212,48 @@ Color tracePath(Ray ray)
             const Ray nextEventShadowRay{ hInfo.p + (hInfo.N * 0.002f * sign), nextEventShadowDir };
             if (!renderer.TraceShadowRay(nextEventShadowRay, nextEventInfo.dist - 0.002f, HIT_FRONT_AND_BACK))
             {
-                const float geometryTerm{ std::max(0.0f, hInfo.N.Dot(nextEventShadowDir)) };
-                if (geometryTerm > 0.0f && nextEventInfo.prob > 0.0f)
+                const float cosThetaSurface{ std::max(0.0f, hInfo.N.Dot(nextEventShadowDir)) };
+                //if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
+                //{
+                //    const Color diffuse{ material->Diffuse().GetValue() };
+                //    //const Color specular{ material->specular().GetValue() };
+                //    //const float gloss{ material->glossiness().getvalue() };
+
+                //    Color brdf{ diffuse / M_PI };
+
+                //    const float cosThetaLight{ std::max(0.0f, nextEventInfo.norm.Dot(-nextEventShadowDir)) };
+                //    const float geometryTerm{ (cosThetaSurface * cosThetaLight) / (nextEventInfo.dist * nextEventInfo.dist) };
+
+                //    //const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
+                //    //const float blinnTerm{ std::max(0.0f, hInfo.N.Dot(h)) };
+                //    //if (blinnTerm > 0.0f)
+                //    //    brdf += specular * ((gloss + 2.0f) / (8.0f * M_PI)) * pow(blinnTerm, gloss);
+
+                //    //DirSampler::Info shadowDirSampleInfo;
+                //    //material->GetSampleInfo(sInfo, nextEventShadowDir, shadowDirSampleInfo);
+                //    //const float denom{ std::max(1e-5f, nextEventInfo.mult.Gray()) };
+                //    //const float conversionFormula{ light->Intensity().Gray() / denom };
+                //    //const float lightSolidProb{ nextEventInfo.prob * conversionFormula };
+                //    //const float nextEventProbSquared{ lightSolidProb * lightSolidProb };
+                //    //const float shadowDirSampleProbSquared{ shadowDirSampleInfo.prob * shadowDirSampleInfo.prob };
+                //    //const float weight{ nextEventProbSquared / (nextEventProbSquared + shadowDirSampleProbSquared) };
+
+                //    //result += ((nextEventInfo.mult * brdf * cosThetaSurface) / nextEventInfo.prob) * weight * throughput;
+                //    result += (brdf * nextEventInfo.mult * geometryTerm) / nextEventInfo.prob;
+                //}
+                if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
                 {
                     const Color diffuse{ material->Diffuse().GetValue() };
                     const Color specular{ material->Specular().GetValue() };
                     const float gloss{ material->Glossiness().GetValue() };
-
-                    Color brdf{ diffuse / M_PI };
+                    Color brdf{ diffuse / Pi<float>() };
 
                     const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
                     const float blinnTerm{ std::max(0.0f, hInfo.N.Dot(h)) };
                     if (blinnTerm > 0.0f)
                         brdf += specular * ((gloss + 2.0f) / (8.0f * M_PI)) * pow(blinnTerm, gloss);
 
-                    DirSampler::Info shadowDirSampleInfo;
-                    material->GetSampleInfo(sInfo, nextEventShadowDir, shadowDirSampleInfo);
-                    const float denom{ std::max(1e-5f, nextEventInfo.mult.Gray()) };
-                    const float conversionFormula{ light->Intensity().Gray() / denom };
-                    const float lightSolidProb{ nextEventInfo.prob * conversionFormula };
-                    const float nextEventProbSquared{ lightSolidProb * lightSolidProb };
-                    const float shadowDirSampleProbSquared{ shadowDirSampleInfo.prob * shadowDirSampleInfo.prob };
-                    const float weight{ nextEventProbSquared / (nextEventProbSquared + shadowDirSampleProbSquared) };
-
-                    result += ((nextEventInfo.mult * brdf * geometryTerm) / nextEventInfo.prob) * weight * throughput;
+                    result += (brdf * nextEventInfo.mult * cosThetaSurface) / nextEventInfo.prob * throughput;
                 }
             }
         }
@@ -256,7 +274,6 @@ Color tracePath(Ray ray)
 
         if (bounce > 2)
         {
-            //std::cout << indirectLightingInfo.mult.r << ',' << indirectLightingInfo.mult.g << ',' << indirectLightingInfo.mult.b << '\n';
             const float prob{ throughput.Max() };
             if (tileThreads::rng.RandomFloat() > prob)
                 break;
@@ -598,7 +615,7 @@ int main()
 
     // Render image
     const size_t numThreads{ std::thread::hardware_concurrency() };
-    //const size_t numThreads{1};
+    //const size_t numThreads{ 1 };
     std::vector<std::thread> threads;
     for (size_t i{ 0 }; i < numThreads; ++i)
         threads.emplace_back(threadRenderTiles);

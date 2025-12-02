@@ -205,28 +205,87 @@ public:
 	Box  GetBoundBox() const override { return Box( position-size, position+size ); }
 	void ViewportDisplay( Material const *mtl ) const override;	// used for OpenGL display
 
+	//bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override 
+    //{
+    //    //const float r1{ sInfo.RandomFloat() };
+    //    //const float r2{ sInfo.RandomFloat() };
+    //    //const float theta{ acosf(sqrtf(r1)) * r2 };
+    //    //const float phi{ 2.0f * static_cast<float>(M_PI) * r2 };
+    //    //const Vec3f localSample{ sinf(theta) * cosf(phi), cosf(theta), sinf(theta) * sinf(phi) };
+    //    
+    //    const float z{ sInfo.RandomFloat() };
+    //    const float sinTheta{ sqrtf(1.0f - z * z) };
+    //    const float phi{ 2.0f * M_PI * sInfo.RandomFloat() };
+    //    const float x{ sinTheta * cos(phi) };
+    //    const float y{ sinTheta * sin(phi) };
+
+    //    const Vec3f dirToMatPoint{ (sInfo.P() - position).GetNormalized() };
+    //    Vec3f u, v;
+    //    dirToMatPoint.GetOrthonormals(u, v);
+    //    const Vec3f sample{ position + (((x * u) + (y * v) + (z * dirToMatPoint)) * size) };
+
+    //    //const float theta{ 2.0f * M_PI * r1 };
+    //    //const float posZ{ size * (1.0f - 2.0f * r2) };
+    //    //const float rProj{ sqrtf(size * size - posZ * posZ) };
+    //    //const float posX{ rProj * cos(theta) };
+    //    //const float posY{ rProj * sin(theta) };
+    //    //const Vec3f pos{ Vec3f{ posX, posY, posZ } + position };
+
+    //    //dir = pos - sInfo.P();
+    //    dir = sample - sInfo.P();
+    //    si.dist = dir.Length();
+    //    dir.Normalize();
+
+    //    si.norm = (sample - position).GetNormalized();
+
+    //    //const Vec3f norm{ (sample - position).GetNormalized() };
+    //    //const float cosThetaLight{ norm.Dot(-dir) };
+    //    //if (cosThetaLight <= 0.0f)
+    //        //return false;
+
+    //    //intensity / (Pi<float>()*size*size)
+    //    //si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
+    //    //si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
+    //    //si.mult = intensity / (si.dist * si.dist);
+    //    //si.mult = Radiance(sInfo) * (Pi<float>() / (si.dist * si.dist));
+    //    //si.mult = Radiance(sInfo);
+    //    //si.mult = intensity / (si.dist * si.dist);
+    //    si.mult = Radiance(sInfo);
+    //    si.prob = 1.0f / (2.0f * Pi<float>() * size * size);
+
+    //    return true;
+    //}
 	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override 
     {
-        float randU{ sInfo.RandomFloat() };
-        float randV{ sInfo.RandomFloat() };
-        const float theta{ 2.0f * M_PI * randU };
-        const float posZ{ size * (1.0f - 2.0f * randV) };
-        const float rProj{ sqrtf(size * size - posZ * posZ) };
-        const float posX{ rProj * cos(theta) };
-        const float posY{ rProj * sin(theta) };
-        const Vec3f pos{ Vec3f{ posX, posY, posZ } + position };
+        Vec3f dirMatToCenter{ position - sInfo.P() };
+        const float distFromCenterToMat{ dirMatToCenter.Length() };
+        dirMatToCenter.Normalize();
 
-        dir = pos - sInfo.P();
-        si.dist = dir.Length();
-        dir.Normalize();
+        const float sinThetaMax{ size / distFromCenterToMat };
+        const float cosThetaMax{ sqrtf(1.0f - (sinThetaMax * sinThetaMax)) };
 
-        const Vec3f norm{ (pos - position).GetNormalized() };
-        const float cosThetaLight{ norm.Dot(-dir) };
-        if (cosThetaLight <= 0.0f)
-            return false;
+        const float r1{ sInfo.RandomFloat() };
+        const float cosTheta{ 1.0f - r1 + r1 * cosThetaMax };
+        const float sinTheta{ sqrtf(1.0f - (cosTheta * cosTheta)) };
+        const float phi{ 2.0f * Pi<float>() * sInfo.RandomFloat() };
 
-        si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
-        si.prob = 1.0f / (4.0f * M_PI * size * size);
+        const float x{ sinTheta * cosf(phi) };
+        const float y{ sinTheta * sinf(phi) };
+        const float z{ cosTheta };
+
+        Vec3f u, v;
+        dirMatToCenter.GetOrthonormals(u, v);
+
+        const float hypotenuse{ distFromCenterToMat };
+        const float adjacent{ hypotenuse * cosTheta };
+        const float oppositeSquared{ (hypotenuse * hypotenuse) - (adjacent * adjacent) };
+        const float distSquaredInside{ (size * size) - oppositeSquared };
+        const float tOffset{ sqrtf(std::max(0.0f, distSquaredInside)) };
+        si.dist = adjacent - tOffset;
+
+        dir = (x * u) + (y * v) + (z * dirMatToCenter);
+        si.mult = Radiance(sInfo);
+        si.prob = 1.0f / (2.0f * Pi<float>() * (1.0f - cosThetaMax));
 
         return true;
     }

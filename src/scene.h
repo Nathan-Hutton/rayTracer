@@ -239,6 +239,7 @@ public:
 		float prob;	// probability of generating the sample
 		float dist;	// the distance to trace a ray in the sample direction (distance to the light for lights, 0 for materials)
 		Lobe  lobe; // the scattering lobe for materials; Lobe::ALL for lights
+        Vec3f norm; // Light's normal
 
 		void SetVoid() { mult.SetBlack(); prob=0.0f; dist=0.0f; lobe=Lobe::NONE; }
 	};
