@@ -244,13 +244,13 @@ public:
     //        //return false;
 
     //    //intensity / (Pi<float>()*size*size)
-    //    //si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
+    //    si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
     //    //si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
     //    //si.mult = intensity / (si.dist * si.dist);
     //    //si.mult = Radiance(sInfo) * (Pi<float>() / (si.dist * si.dist));
     //    //si.mult = Radiance(sInfo);
     //    //si.mult = intensity / (si.dist * si.dist);
-    //    si.mult = Radiance(sInfo);
+    //    //si.mult = Radiance(sInfo);
     //    si.prob = 1.0f / (2.0f * Pi<float>() * size * size);
 
     //    return true;
@@ -284,8 +284,10 @@ public:
         si.dist = adjacent - tOffset;
 
         dir = (x * u) + (y * v) + (z * dirMatToCenter);
-        si.mult = Radiance(sInfo);
-        si.prob = 1.0f / (2.0f * Pi<float>() * (1.0f - cosThetaMax));
+        //si.mult = Radiance(sInfo);
+        si.mult = intensity;
+        const float oneMinusCosThetaMax = (sinThetaMax * sinThetaMax) / (1.0f + cosThetaMax);
+        si.prob = 1.0f / (2.0f * Pi<float>() * oneMinusCosThetaMax);
 
         return true;
     }

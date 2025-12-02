@@ -208,39 +208,11 @@ Color tracePath(Ray ray)
         Vec3f nextEventShadowDir;
         if (light->GenerateSample(sInfo, nextEventShadowDir, nextEventInfo))
         {
-            const float sign{ (hInfo.N.Dot(nextEventShadowDir) > 0.0f) ? 1.0f : -1.0f };
+            const float sign{ hInfo.front ? 1.0f : -1.0f };
             const Ray nextEventShadowRay{ hInfo.p + (hInfo.N * 0.002f * sign), nextEventShadowDir };
             if (!renderer.TraceShadowRay(nextEventShadowRay, nextEventInfo.dist - 0.002f, HIT_FRONT_AND_BACK))
             {
                 const float cosThetaSurface{ std::max(0.0f, hInfo.N.Dot(nextEventShadowDir)) };
-                //if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
-                //{
-                //    const Color diffuse{ material->Diffuse().GetValue() };
-                //    //const Color specular{ material->specular().GetValue() };
-                //    //const float gloss{ material->glossiness().getvalue() };
-
-                //    Color brdf{ diffuse / M_PI };
-
-                //    const float cosThetaLight{ std::max(0.0f, nextEventInfo.norm.Dot(-nextEventShadowDir)) };
-                //    const float geometryTerm{ (cosThetaSurface * cosThetaLight) / (nextEventInfo.dist * nextEventInfo.dist) };
-
-                //    //const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
-                //    //const float blinnTerm{ std::max(0.0f, hInfo.N.Dot(h)) };
-                //    //if (blinnTerm > 0.0f)
-                //    //    brdf += specular * ((gloss + 2.0f) / (8.0f * M_PI)) * pow(blinnTerm, gloss);
-
-                //    //DirSampler::Info shadowDirSampleInfo;
-                //    //material->GetSampleInfo(sInfo, nextEventShadowDir, shadowDirSampleInfo);
-                //    //const float denom{ std::max(1e-5f, nextEventInfo.mult.Gray()) };
-                //    //const float conversionFormula{ light->Intensity().Gray() / denom };
-                //    //const float lightSolidProb{ nextEventInfo.prob * conversionFormula };
-                //    //const float nextEventProbSquared{ lightSolidProb * lightSolidProb };
-                //    //const float shadowDirSampleProbSquared{ shadowDirSampleInfo.prob * shadowDirSampleInfo.prob };
-                //    //const float weight{ nextEventProbSquared / (nextEventProbSquared + shadowDirSampleProbSquared) };
-
-                //    //result += ((nextEventInfo.mult * brdf * cosThetaSurface) / nextEventInfo.prob) * weight * throughput;
-                //    result += (brdf * nextEventInfo.mult * geometryTerm) / nextEventInfo.prob;
-                //}
                 if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
                 {
                     const Color diffuse{ material->Diffuse().GetValue() };
@@ -251,7 +223,7 @@ Color tracePath(Ray ray)
                     const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
                     const float blinnTerm{ std::max(0.0f, hInfo.N.Dot(h)) };
                     if (blinnTerm > 0.0f)
-                        brdf += specular * ((gloss + 2.0f) / (8.0f * M_PI)) * pow(blinnTerm, gloss);
+                        brdf += specular * ((gloss * 2.0f) / (2.0f * Pi<float>())) * pow(blinnTerm, gloss);
 
                     result += (brdf * nextEventInfo.mult * cosThetaSurface) / nextEventInfo.prob * throughput;
                 }
