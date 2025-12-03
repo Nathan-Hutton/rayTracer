@@ -83,7 +83,7 @@ public:
 #ifdef LEGACY_SHADING_API
 	Color Illuminate( ShadeInfo const &sInfo, Vec3f &dir ) const override;
 #endif
-	Color Radiance( SamplerInfo const &sInfo ) const override { return intensity / (Pi<float>()*size*size); }
+	Color Radiance( SamplerInfo const &sInfo ) const override { return intensity / ((Pi<float>())*size*size); }
 	Color Intensity     () const override { return intensity; }
 	bool  IsRenderable  () const override { return size > 0.0f; }
 	bool  IsPhotonSource() const override { return true; }

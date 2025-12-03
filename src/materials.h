@@ -202,14 +202,14 @@ public:
         float specularProb{ specular.GetValue().Gray() };
         float transmissiveProb{ refraction.GetValue().Gray() };
 
-        if (transmissiveProb > 0.0f) {
-            const float R0{ 0.04f };
-            const float cosTheta{ std::abs(sInfo.N().Dot(sInfo.V())) };
-            const float F{ R0 + (1.0f - R0) * powf(1.0f - cosTheta, 5.0f) };
-            const float totalSpecTrans{ specularProb + transmissiveProb };
-            specularProb = totalSpecTrans * F;
-            transmissiveProb = totalSpecTrans * (1.0f - F);
-        }
+        //if (transmissiveProb > 0.0f) {
+        //    const float R0{ 0.04f };
+        //    const float cosTheta{ std::abs(sInfo.N().Dot(sInfo.V())) };
+        //    const float F{ R0 + (1.0f - R0) * powf(1.0f - cosTheta, 5.0f) };
+        //    const float totalSpecTrans{ specularProb + transmissiveProb };
+        //    specularProb = totalSpecTrans * F;
+        //    transmissiveProb = totalSpecTrans * (1.0f - F);
+        //}
 
         const float totalProb{ diffuseProb + specularProb + transmissiveProb };
         diffuseProb /= totalProb;
@@ -217,24 +217,27 @@ public:
         transmissiveProb /= totalProb;
 
         const float randomNum{ sInfo.RandomFloat() };
-        if (randomNum < diffuseProb)
+        if (randomNum < diffuseProb) // TODO: Do cosine weighted instead of uniform
         {
             si.lobe = DirSampler::Lobe::DIFFUSE;
 
-            // Direction
-            const float r2{ sInfo.RandomFloat() };
-            const float cosTheta{ sqrtf(1.0f - r2) };
-            const float sinTheta{ sqrtf(r2) };
-            const float phi{ 2.0f * Pi<float>() * sInfo.RandomFloat() };
-            const Vec3f localDir{ sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta };
-            const Vec3f helper{ (std::abs(sInfo.N().x) > 0.9f) ? Vec3f{ 0.0f, 1.0f, 0.0f } : Vec3f{ 1.0f, 0.0f, 0.0f } };
-            const Vec3f tangent{ helper.Cross(sInfo.N()).GetNormalized() };
-            const Vec3f bitangent{ sInfo.N().Cross(tangent).GetNormalized() };
-            dir = (tangent * localDir.x) + (bitangent * localDir.y) + (sInfo.N() * localDir.z);
+            // Uniform hemisphere sample
+            const float r1{ sInfo.RandomFloat() };
+            const float cosTheta{ sInfo.RandomFloat() };
+            const float sinTheta{ sqrtf(1.0f - (cosTheta * cosTheta)) };
+            const float phi{ 2.0f * Pi<float>() * r1 };
 
-            dir.Normalize();
-            si.prob = cosTheta / Pi<float>();
-            si.mult = diffuse.GetValue() * (cosTheta / Pi<float>()) / diffuseProb;
+            const float x{ cosf(phi) * sinTheta };
+            const float y{ sinf(phi) * sinTheta };
+
+            Vec3f u, v;
+            sInfo.N().GetOrthonormals(u, v);
+
+            dir = (u * x) + (v * y) + (sInfo.N() * cosTheta);
+            const float geometryTerm{ std::max(0.0f, sInfo.N().Dot(dir)) };
+
+            si.prob = diffuseProb / (2.0f * Pi<float>());
+            si.mult = diffuse.GetValue() * geometryTerm / Pi<float>();
 
             return true;
         }

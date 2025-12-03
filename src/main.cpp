@@ -243,22 +243,24 @@ Color tracePath(Ray ray)
         if (!material->GenerateSample(sInfo, bounceDir, indirectLightingInfo))
             break;
 
-        lastBounceProb = indirectLightingInfo.prob;
+        //lastBounceProb = indirectLightingInfo.prob;
 
         ray.dir = bounceDir;
-        const float sign{ (hInfo.N.Dot(bounceDir) > 0.0f) ? 1.0f : -1.0f };
-        ray.p = hInfo.p + (hInfo.N * 0.002f * sign);
+        const float sign{ (normal.Dot(bounceDir) > 0.0f) ? 1.0f : -1.0f };
+        ray.p = hInfo.p + (normal * 0.002f * sign);
 
+        //const float cosTheta{ bounceDir.Dot(normal) };
+        //throughput *= (indirectLightingInfo.mult * cosTheta) / indirectLightingInfo.prob;
         throughput *= indirectLightingInfo.mult / indirectLightingInfo.prob;
 
-        if (bounce > 2)
-        {
-            const float prob{ throughput.Max() };
-            if (tileThreads::rng.RandomFloat() > prob)
-                break;
+        //if (bounce > 2)
+        //{
+        //    const float prob{ throughput.Max() };
+        //    if (tileThreads::rng.RandomFloat() > prob)
+        //        break;
 
-            throughput /= prob;
-        }
+        //    throughput /= prob;
+        //}
     }
 
     return result;
