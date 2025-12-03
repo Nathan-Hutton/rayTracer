@@ -176,66 +176,66 @@ Color tracePath(Ray ray)
             return result;
         }
 
+        SamplerInfo sInfo{ tileThreads::rng };
+        sInfo.SetHit(ray, hInfo);
         const Vec3f normal{ hInfo.N.GetNormalized() };
 
         if (hInfo.light)
         {
             if (bounce == 0)
             {
-                result += light->Intensity() * throughput;
+                result += light->Radiance(sInfo) * throughput;
             }
-            //else
-            //{
-            //    //const float distSquared{ powf((hInfo.p - ray.p).Length(), 2.0f) };
-            //    const float distSquared{ hInfo.z * hInfo.z };
-            //    const float cosThetaLight{ std::max(1e-4f, hInfo.N.Dot(-ray.dir)) };
-            //    const float lightAreaPDF{ 1.0f / (4.0f * M_PI * light->GetSize() * light->GetSize()) };
-            //    const float lightSolidPDF{ lightAreaPDF * (distSquared / cosThetaLight) };
+            else
+            {
+                ////const float distSquared{ powf((hInfo.p - ray.p).Length(), 2.0f) };
+                //const float distSquared{ hInfo.z * hInfo.z };
+                //const float cosThetaLight{ std::max(1e-4f, hInfo.N.Dot(-ray.dir)) };
+                //const float lightAreaPDF{ 1.0f / (4.0f * M_PI * light->GetSize() * light->GetSize()) };
+                //const float lightSolidPDF{ lightAreaPDF * (distSquared / cosThetaLight) };
 
-            //    const float lastBouncePDFSquared{ lastBounceProb * lastBounceProb };
-            //    const float lightSolidPDFSquared{ lightSolidPDF * lightSolidPDF };
-            //    const float weight{ lastBouncePDFSquared / (lastBouncePDFSquared + lightSolidPDFSquared) };
+                //const float lastBouncePDFSquared{ lastBounceProb * lastBounceProb };
+                //const float lightSolidPDFSquared{ lightSolidPDF * lightSolidPDF };
+                //const float weight{ lastBouncePDFSquared / (lastBouncePDFSquared + lightSolidPDFSquared) };
 
-            //    result += light->Intensity() * throughput * weight;
-            //}
+                //result += light->Intensity() * throughput * weight;
+                result += light->Radiance(sInfo) * throughput;
+            }
             return result;
         }
 
         const MtlBasePhongBlinn* material{ static_cast<const MtlBasePhongBlinn*>(hInfo.node->GetMaterial()) };
-        SamplerInfo sInfo{ tileThreads::rng };
-        sInfo.SetHit(ray, hInfo);
 
         // Next event estimation
         DirSampler::Info nextEventInfo;
         Vec3f nextEventShadowDir;
-        if (light->GenerateSample(sInfo, nextEventShadowDir, nextEventInfo))
-        {
-            const float sign{ hInfo.front ? 1.0f : -1.0f };
-            const Ray nextEventShadowRay{ hInfo.p + (normal * 0.002f * sign), nextEventShadowDir };
-            if (!renderer.TraceShadowRay(nextEventShadowRay, nextEventInfo.dist - 0.002f, HIT_FRONT_AND_BACK))
-            {
-                const float cosThetaSurface{ std::max(0.0f, normal.Dot(nextEventShadowDir)) };
-                if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
-                {
-                    const Color diffuse{ material->Diffuse().GetValue() };
-                    Color brdf{ diffuse / Pi<float>() };
+        //if (light->GenerateSample(sInfo, nextEventShadowDir, nextEventInfo))
+        //{
+        //    const float sign{ hInfo.front ? 1.0f : -1.0f };
+        //    const Ray nextEventShadowRay{ hInfo.p + (normal * 0.002f * sign), nextEventShadowDir };
+        //    if (!renderer.TraceShadowRay(nextEventShadowRay, nextEventInfo.dist - 0.002f, HIT_FRONT_AND_BACK))
+        //    {
+        //        const float cosThetaSurface{ std::max(0.0f, normal.Dot(nextEventShadowDir)) };
+        //        if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
+        //        {
+        //            const Color diffuse{ material->Diffuse().GetValue() };
+        //            Color brdf{ diffuse / Pi<float>() };
 
-                    const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
-                    const float blinnTerm{ std::max(0.0f, normal.Dot(h)) };
-                    
-                    if (blinnTerm > 0.0f)
-                    {
-                        const Color specular{ material->Specular().GetValue() };
-                        const float gloss{ material->Glossiness().GetValue() };
-                        const float specNorm{ (gloss * 8.0f) / (8.0f * Pi<float>()) };
-                        brdf += specular * specNorm * pow(blinnTerm, gloss);
-                    }
+        //            const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
+        //            const float blinnTerm{ std::max(0.0f, normal.Dot(h)) };
+        //            
+        //            if (blinnTerm > 0.0f)
+        //            {
+        //                const Color specular{ material->Specular().GetValue() };
+        //                const float gloss{ material->Glossiness().GetValue() };
+        //                const float specNorm{ (gloss * 8.0f) / (8.0f * Pi<float>()) };
+        //                brdf += specular * specNorm * pow(blinnTerm, gloss);
+        //            }
 
-                    result += (brdf * cosThetaSurface * nextEventInfo.mult) / nextEventInfo.prob * throughput;
-                }
-            }
-        }
-        break;
+        //            result += (brdf * cosThetaSurface * nextEventInfo.mult) / nextEventInfo.prob * throughput;
+        //        }
+        //    }
+        //}
 
         // Indirect bounce
         Vec3f bounceDir;
