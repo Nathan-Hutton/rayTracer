@@ -252,14 +252,14 @@ Color tracePath(Ray ray)
         const float cosTheta{ normal.Dot(bounceDir * sign) };
         throughput *= (indirectLightingInfo.mult * cosTheta) / indirectLightingInfo.prob;
 
-        //if (bounce > 3)
-        //{
-        //    const float prob{ throughput.Max() };
-        //    if (tileThreads::rng.RandomFloat() > prob)
-        //        break;
+        if (bounce > 3)
+        {
+            const float prob{ throughput.Max() };
+            if (tileThreads::rng.RandomFloat() > prob)
+                break;
 
-        //    throughput /= prob;
-        //}
+            throughput /= prob;
+        }
     }
 
     return result;
