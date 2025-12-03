@@ -283,9 +283,8 @@ public:
         const float tOffset{ sqrtf(std::max(0.0f, distSquaredInside)) };
         si.dist = adjacent - tOffset;
 
-        dir = (x * u) + (y * v) + (z * dirMatToCenter);
+        dir = ((x * u) + (y * v) + (z * dirMatToCenter)).GetNormalized();
         si.mult = Radiance(sInfo);
-        //si.mult = intensity;
         const float oneMinusCosThetaMax = (sinThetaMax * sinThetaMax) / (1.0f + cosThetaMax);
         si.prob = 1.0f / (2.0f * Pi<float>() * oneMinusCosThetaMax);
 

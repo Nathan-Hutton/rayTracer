@@ -218,17 +218,20 @@ Color tracePath(Ray ray)
                 if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
                 {
                     const Color diffuse{ material->Diffuse().GetValue() };
-                    const Color specular{ material->Specular().GetValue() };
-                    const float gloss{ material->Glossiness().GetValue() };
-                    Color brdf{ diffuse / Pi<float>() * cosThetaSurface };
+                    Color brdf{ diffuse / Pi<float>() };
 
                     const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
                     const float blinnTerm{ std::max(0.0f, normal.Dot(h)) };
                     
                     if (blinnTerm > 0.0f)
-                        brdf += specular * ((gloss + 2.0f) / (8.0f * Pi<float>())) * pow(blinnTerm, gloss);
+                    {
+                        const Color specular{ material->Specular().GetValue() };
+                        const float gloss{ material->Glossiness().GetValue() };
+                        const float specNorm{ (gloss * 8.0f) / (8.0f * Pi<float>()) };
+                        brdf += specular * specNorm * pow(blinnTerm, gloss);
+                    }
 
-                    result += (brdf * nextEventInfo.mult) / nextEventInfo.prob * throughput;
+                    result += (brdf * cosThetaSurface * nextEventInfo.mult) / nextEventInfo.prob * throughput;
                 }
             }
         }
