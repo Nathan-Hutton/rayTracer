@@ -217,27 +217,49 @@ public:
         transmissiveProb /= totalProb;
 
         const float randomNum{ sInfo.RandomFloat() };
-        if (randomNum < diffuseProb) // TODO: Do cosine weighted instead of uniform
+        //if (randomNum < diffuseProb)
+        //{
+        //    si.lobe = DirSampler::Lobe::DIFFUSE;
+
+        //    // Uniform hemisphere sample
+        //    const float r1{ sInfo.RandomFloat() };
+        //    const float cosTheta{ sInfo.RandomFloat() };
+        //    const float sinTheta{ sqrtf(1.0f - (cosTheta * cosTheta)) };
+        //    const float phi{ 2.0f * Pi<float>() * r1 };
+
+        //    const float x{ cosf(phi) * sinTheta };
+        //    const float y{ sinf(phi) * sinTheta };
+
+        //    Vec3f u, v;
+        //    sInfo.N().GetOrthonormals(u, v);
+
+        //    dir = (u * x) + (v * y) + (sInfo.N() * cosTheta);
+
+        //    si.prob = diffuseProb / (2.0f * Pi<float>());
+        //    si.mult = diffuse.GetValue() / Pi<float>();
+
+        //    return true;
+        //}
+        if (randomNum < diffuseProb)
         {
             si.lobe = DirSampler::Lobe::DIFFUSE;
 
-            // Uniform hemisphere sample
-            const float r1{ sInfo.RandomFloat() };
-            const float cosTheta{ sInfo.RandomFloat() };
-            const float sinTheta{ sqrtf(1.0f - (cosTheta * cosTheta)) };
-            const float phi{ 2.0f * Pi<float>() * r1 };
-
-            const float x{ cosf(phi) * sinTheta };
-            const float y{ sinf(phi) * sinTheta };
+            // Cosine weighted hemisphere sample
+            const float r{ sqrtf(sInfo.RandomFloat()) };
+            const float theta{ 2.0f * Pi<float>() * sInfo.RandomFloat() };
+            const float x{ r * cosf(theta) };
+            const float y{ r * sinf(theta) };
+            const float z{ sqrtf(std::max(0.0f, 1.0f - x*x - y*y)) };
 
             Vec3f u, v;
             sInfo.N().GetOrthonormals(u, v);
 
-            dir = (u * x) + (v * y) + (sInfo.N() * cosTheta);
+            dir = (u * x) + (v * y) + (sInfo.N() * z);
+
             const float geometryTerm{ std::max(0.0f, sInfo.N().Dot(dir)) };
 
-            si.prob = diffuseProb / (2.0f * Pi<float>());
-            si.mult = diffuse.GetValue() * geometryTerm / Pi<float>();
+            si.mult = diffuse.GetValue() / Pi<float>();
+            si.prob = diffuseProb * (geometryTerm / Pi<float>());
 
             return true;
         }

@@ -161,7 +161,7 @@ Color tracePath(Ray ray)
 {
     Color throughput{ 1.0f };
     Color result{ 0.0f };
-    constexpr size_t maxBounces{ 5 };
+    constexpr size_t maxBounces{ 50 };
     const Light* light{ renderer.GetScene().lights[0] };
 
     float lastBounceProb{ 1.0f };
@@ -207,8 +207,8 @@ Color tracePath(Ray ray)
         const MtlBasePhongBlinn* material{ static_cast<const MtlBasePhongBlinn*>(hInfo.node->GetMaterial()) };
 
         // Next event estimation
-        DirSampler::Info nextEventInfo;
-        Vec3f nextEventShadowDir;
+        //DirSampler::Info nextEventInfo;
+        //Vec3f nextEventShadowDir;
         //if (light->GenerateSample(sInfo, nextEventShadowDir, nextEventInfo))
         //{
         //    const float sign{ hInfo.front ? 1.0f : -1.0f };
@@ -249,11 +249,10 @@ Color tracePath(Ray ray)
         const float sign{ (normal.Dot(bounceDir) > 0.0f) ? 1.0f : -1.0f };
         ray.p = hInfo.p + (normal * 0.002f * sign);
 
-        //const float cosTheta{ bounceDir.Dot(normal) };
-        //throughput *= (indirectLightingInfo.mult * cosTheta) / indirectLightingInfo.prob;
-        throughput *= indirectLightingInfo.mult / indirectLightingInfo.prob;
+        const float cosTheta{ normal.Dot(bounceDir * sign) };
+        throughput *= (indirectLightingInfo.mult * cosTheta) / indirectLightingInfo.prob;
 
-        //if (bounce > 2)
+        //if (bounce > 3)
         //{
         //    const float prob{ throughput.Max() };
         //    if (tileThreads::rng.RandomFloat() > prob)
