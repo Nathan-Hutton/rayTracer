@@ -266,11 +266,35 @@ public:
         if (randomNum < diffuseProb + specularProb)
         {
             si.lobe = DirSampler::Lobe::SPECULAR;
-            dir = -sInfo.V() - (sInfo.N() * 2.0f * sInfo.N().Dot(-sInfo.V()));
+            //dir = -sInfo.V() - (sInfo.N() * 2.0f * sInfo.N().Dot(-sInfo.V()));
+
+            const float phi{ 2.0f * Pi<float>() * sInfo.RandomFloat() };
+            const float r2{ sInfo.RandomFloat() };
+            const float alpha{ sqrtf(2.0f / (glossiness.GetValue() + 2.0f)) };
+            const float alphaSquared{ alpha * alpha };
+            const float cosTheta{ sqrtf((1.0f - r2) / (1.0f + (alphaSquared - 1.0f) * r2)) };
+            const float sinTheta{ sqrtf(1.0f - cosTheta * cosTheta) };
+            const float x{ cosf(phi) * sinTheta };
+            const float y{ sinf(phi) * sinTheta };
+
+            Vec3f u, v;
+            sInfo.N().GetOrthonormals(u, v);
+            const Vec3f h{ (x * u) + (y * v) + (cosTheta * sInfo.N()) };
+            dir = h * 2.0f * std::max(0.0f, sInfo.V().Dot(h)) - sInfo.V();
+            if (sInfo.N().Dot(dir) < 0.0f)
+                return false;
+
+            const float nDotH{ sInfo.N().Dot(h) };
+            if (nDotH < 0.0f)
+                return false;
+
+            const float denom{ (nDotH * nDotH) * (alphaSquared - 1.0f) + 1.0f };
+            const float ggxNdf{ alphaSquared / (Pi<float>() * denom * denom) };
+            si.prob = specularProb * (ggxNdf * nDotH) / (4.0f * dir.Dot(h));
 
             const float geometryTerm{ std::max(0.0f, sInfo.N().Dot(dir)) };
             si.mult = geometryTerm < 1e-6 ? Color{ 0.0f } : specular.GetValue() / geometryTerm;
-            si.prob = specularProb;
+            //si.prob = specularProb;
 
             return true;
         }
