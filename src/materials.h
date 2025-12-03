@@ -263,35 +263,17 @@ public:
 
             return true;
         }
-        //if (randomNum < diffuseProb + specularProb)
-        //{
-        //    si.lobe = DirSampler::Lobe::SPECULAR;
+        if (randomNum < diffuseProb + specularProb)
+        {
+            si.lobe = DirSampler::Lobe::SPECULAR;
+            dir = -sInfo.V() - (sInfo.N() * 2.0f * sInfo.N().Dot(-sInfo.V()));
 
-        //    // Direction
-        //    const float r1{ sInfo.RandomFloat() };
-        //    const float r2{ sInfo.RandomFloat() };
-        //    const float phi{ 2.0f * M_PI * r1 };
-        //    const float cosTheta{ pow(r2, 1.0f / (glossiness.GetValue() + 1.0f)) };
-        //    const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
+            const float geometryTerm{ std::max(0.0f, sInfo.N().Dot(dir)) };
+            si.mult = geometryTerm < 1e-6 ? Color{ 0.0f } : specular.GetValue() / geometryTerm;
+            si.prob = specularProb;
 
-        //    const float x{ sinTheta * cos(phi) };
-        //    const float y{ sinTheta * sin(phi) };
-        //    const float z{ cosTheta };
-
-        //    Vec3f u, v;
-        //    sInfo.N().GetOrthonormals(u, v);
-        //    const Vec3f h{ (x * u) + (y * v) + (z * sInfo.N()) };
-
-        //    dir = h * 2 * sInfo.V().Dot(h) - sInfo.V();
-        //    //si.mult = specular.GetValue() * dir.Dot(sInfo.N());
-        //    si.mult = specular.GetValue() / specularProb;
-
-        //    const float halfPDF{ ((glossiness.GetValue() + 1.0f) / (2.0f * M_PI)) * powf(cosTheta, glossiness.GetValue()) };
-        //    const float geoPDF{ halfPDF / (4.0f * sInfo.V().Dot(h)) };
-        //    si.prob = specularProb * geoPDF;
-
-        //    return dir.Dot(sInfo.N()) > 0.0f;
-        //}
+            return true;
+        }
         //if (randomNum < diffuseProb + specularProb + transmissiveProb)
         //{
         //    const Vec3f N{ sInfo.IsFront() ? sInfo.N() : -sInfo.N() };
