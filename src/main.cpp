@@ -176,6 +176,8 @@ Color tracePath(Ray ray)
             return result;
         }
 
+        const Vec3f normal{ hInfo.N.GetNormalized() };
+
         if (hInfo.light)
         {
             if (bounce == 0)
@@ -209,26 +211,28 @@ Color tracePath(Ray ray)
         if (light->GenerateSample(sInfo, nextEventShadowDir, nextEventInfo))
         {
             const float sign{ hInfo.front ? 1.0f : -1.0f };
-            const Ray nextEventShadowRay{ hInfo.p + (hInfo.N * 0.002f * sign), nextEventShadowDir };
+            const Ray nextEventShadowRay{ hInfo.p + (normal * 0.002f * sign), nextEventShadowDir };
             if (!renderer.TraceShadowRay(nextEventShadowRay, nextEventInfo.dist - 0.002f, HIT_FRONT_AND_BACK))
             {
-                const float cosThetaSurface{ std::max(0.0f, hInfo.N.Dot(nextEventShadowDir)) };
+                const float cosThetaSurface{ std::max(0.0f, normal.Dot(nextEventShadowDir)) };
                 if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
                 {
                     const Color diffuse{ material->Diffuse().GetValue() };
                     const Color specular{ material->Specular().GetValue() };
                     const float gloss{ material->Glossiness().GetValue() };
-                    Color brdf{ diffuse / Pi<float>() };
+                    Color brdf{ diffuse / Pi<float>() * cosThetaSurface };
 
                     const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
-                    const float blinnTerm{ std::max(0.0f, hInfo.N.Dot(h)) };
+                    const float blinnTerm{ std::max(0.0f, normal.Dot(h)) };
+                    
                     if (blinnTerm > 0.0f)
-                        brdf += specular * ((gloss * 2.0f) / (2.0f * Pi<float>())) * pow(blinnTerm, gloss);
+                        brdf += specular * ((gloss + 2.0f) / (8.0f * Pi<float>())) * pow(blinnTerm, gloss);
 
-                    result += (brdf * nextEventInfo.mult * cosThetaSurface) / nextEventInfo.prob * throughput;
+                    result += (brdf * nextEventInfo.mult) / nextEventInfo.prob * throughput;
                 }
             }
         }
+        break;
 
         // Indirect bounce
         Vec3f bounceDir;
@@ -242,7 +246,7 @@ Color tracePath(Ray ray)
         const float sign{ (hInfo.N.Dot(bounceDir) > 0.0f) ? 1.0f : -1.0f };
         ray.p = hInfo.p + (hInfo.N * 0.002f * sign);
 
-        throughput *= indirectLightingInfo.mult;
+        throughput *= indirectLightingInfo.mult / indirectLightingInfo.prob;
 
         if (bounce > 2)
         {
