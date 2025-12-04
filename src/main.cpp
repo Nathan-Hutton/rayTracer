@@ -228,7 +228,7 @@ Color tracePath(Ray ray)
         //            {
         //                const Color specular{ material->Specular().GetValue() };
         //                const float gloss{ material->Glossiness().GetValue() };
-        //                const float specNorm{ (gloss * 8.0f) / (8.0f * Pi<float>()) };
+        //                const float specNorm{ (gloss + 2) / (2.0f * Pi<float>()) };
         //                brdf += specular * specNorm * pow(blinnTerm, gloss);
         //            }
 
