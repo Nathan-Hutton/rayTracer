@@ -198,6 +198,10 @@ public:
 
 	bool GenerateSample( SamplerInfo const &sInfo, Vec3f &dir, Info &si ) const override 
     {
+        const Color diffuseColor{ diffuse.GetValue() };
+        const Color specularColor{ specular.GetValue() };
+        const Color transmissiveColor{ refraction.GetValue() };
+
         float diffuseProb{ diffuse.GetValue().Gray() };
         float specularProb{ specular.GetValue().Gray() };
         float transmissiveProb{ refraction.GetValue().Gray() };
@@ -212,9 +216,12 @@ public:
         //}
 
         const float totalProb{ diffuseProb + specularProb + transmissiveProb };
-        diffuseProb /= totalProb;
-        specularProb /= totalProb;
-        transmissiveProb /= totalProb;
+        if (totalProb > 1.0f)
+        {
+            diffuseProb /= totalProb;
+            specularProb /= totalProb;
+            transmissiveProb /= totalProb;
+        }
 
         const float randomNum{ sInfo.RandomFloat() };
         //if (randomNum < diffuseProb)
@@ -236,7 +243,7 @@ public:
         //    dir = (u * x) + (v * y) + (sInfo.N() * cosTheta);
 
         //    si.prob = diffuseProb / (2.0f * Pi<float>());
-        //    si.mult = diffuse.GetValue() / Pi<float>();
+        //    si.mult = diffuseColor / Pi<float>();
 
         //    return true;
         //}
@@ -258,7 +265,7 @@ public:
 
             const float geometryTerm{ std::max(0.0f, sInfo.N().Dot(dir)) };
 
-            si.mult = diffuse.GetValue() / Pi<float>();
+            si.mult = diffuseColor / Pi<float>();
             si.prob = diffuseProb * (geometryTerm / Pi<float>());
 
             return true;
@@ -281,22 +288,49 @@ public:
             sInfo.N().GetOrthonormals(u, v);
             const Vec3f h{ (x * u) + (y * v) + (cosTheta * sInfo.N()) };
             dir = h * 2.0f * std::max(0.0f, sInfo.V().Dot(h)) - sInfo.V();
-            if (sInfo.N().Dot(dir) < 0.0f)
+
+            const float nDotDir{ std::max(0.00001f, sInfo.N().Dot(dir)) };
+            if (nDotDir < 0.0f)
                 return false;
 
             const float nDotH{ sInfo.N().Dot(h) };
-            if (nDotH < 0.0f)
-                return false;
+            const float nDotV{ std::max(0.00001f, sInfo.N().Dot(sInfo.V())) };
+            const float vDotH{ std::max(0.0f, sInfo.V().Dot(h)) };
+
+            const float G1_V{ 2.0f * nDotV / (nDotV + sqrtf(alphaSquared + (1.0f - alphaSquared) * (nDotV * nDotV))) };
+            const float G1_L{ 2.0f * nDotDir / (nDotDir + sqrtf(alphaSquared + (1.0f - alphaSquared) * (nDotDir * nDotDir))) };
+            const float G{ G1_V * G1_L };
+
+            //si.mult = fresnel * G * vDotH;
+            //si.prob = nDotV * nDotH;
 
             const float denom{ (nDotH * nDotH) * (alphaSquared - 1.0f) + 1.0f };
-            const float ggxNdf{ alphaSquared / (Pi<float>() * denom * denom) };
-            si.prob = specularProb * (ggxNdf * nDotH) / (4.0f * dir.Dot(h));
+            const float D{ alphaSquared / (Pi<float>() * denom * denom) };
+            si.prob = specularProb * (D * nDotH) / (4.0f * std::max(0.00001f, vDotH));
 
-            const float geometryTerm{ std::max(0.0f, sInfo.N().Dot(dir)) };
-            si.mult = geometryTerm < 1e-6 ? Color{ 0.0f } : specular.GetValue() / geometryTerm;
-            //si.prob = specularProb;
+            const Color fresnel{ specularColor + (Color{ 1.0f } - specularColor) * powf(1.0f - vDotH, 5.0f) };
+            si.mult = (D * fresnel * G) / (4.0f * nDotV * nDotDir);
 
             return true;
+            //si.prob = specularProb;
+
+            //const auto G1_smith = [&](float nDotX, float alpha) {
+            //    const float alpha2{ alpha * alpha };
+            //    return (2.0f * nDotX) / (nDotX + sqrtf(alpha2 + (1.0f - alpha2) * nDotX * nDotX));
+            //};
+
+            //const float nDotV{ std::max(0.00001f, sInfo.N().Dot(sInfo.V())) };
+            //const float G{ G1_smith(nDotDir, alpha) * G1_smith(nDotV, alpha) };
+
+            ////si.mult = ((ggxNdf * fresnel * G) / (4.0f * nDotDir * nDotV));
+
+            //si.mult = nDotDir < 1e-6 ? Color{ 0.0f } : specularColor / nDotDir;
+            //return true;
+        }
+        if (randomNum < diffuseProb + specularProb + transmissiveProb)
+        {
+            return true;
+            const Vec3f N{ sInfo.IsFront() ? sInfo.N() : -sInfo.N() };
         }
         //if (randomNum < diffuseProb + specularProb + transmissiveProb)
         //{

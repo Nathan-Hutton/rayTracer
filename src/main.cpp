@@ -252,14 +252,14 @@ Color tracePath(Ray ray)
         const float cosTheta{ normal.Dot(bounceDir * sign) };
         throughput *= (indirectLightingInfo.mult * cosTheta) / indirectLightingInfo.prob;
 
-        if (bounce > 3)
-        {
-            const float prob{ throughput.Max() };
-            if (tileThreads::rng.RandomFloat() > prob)
-                break;
+        //if (bounce > 3)
+        //{
+        //    const float prob{ throughput.Max() };
+        //    if (tileThreads::rng.RandomFloat() > prob)
+        //        break;
 
-            throughput /= prob;
-        }
+        //    throughput /= prob;
+        //}
     }
 
     return result;
@@ -268,8 +268,8 @@ Color tracePath(Ray ray)
 // Adaptive
 void threadRenderTiles()
 {
-    constexpr size_t minNumSamples{ 16 };
-    constexpr size_t maxNumSamples{ 64 };
+    constexpr size_t minNumSamples{ 516 };
+    constexpr size_t maxNumSamples{ 1024 };
 
     while (true)
     {
