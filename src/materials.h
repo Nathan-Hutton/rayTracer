@@ -271,14 +271,10 @@ public:
                 return false;
 
             const float pdfH{ ((alpha + 1) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
-            si.prob = pdfH / (4.0f * sInfo.V().Dot(h));
-            //si.prob = pdfH * 4.0f;
+            si.prob = pdfH / 4.0f;
             const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
             const float fresnelFactor{ powf(1.0f - sInfo.V().Dot(h), 5.0f) };
-            //const float fresnelReflectionAmount{ fresnelRatio + (1.0f - fresnelRatio) * fresnelFactor };
-            const Color F{ specularColor + (Color{ 1.0f } - specularColor) * fresnelFactor };
-            //si.mult = ((fresnelReflectionAmount * specularColor * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / specularProb;
-            //si.mult = ((F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / (sInfo.N().Dot(dir) * sInfo.N().Dot(sInfo.V())) / specularProb;
+            const Color F{ reflection.GetValue() + (Color{ 1.0f } - reflection.GetValue()) * fresnelFactor };
             si.mult = ((F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / specularProb;
 
             return true;
@@ -310,12 +306,6 @@ public:
             const Vec3f h{ (x * u) + (y * v) + (cosTheta * N) };
             const float vDotH{ sInfo.V().Dot(h) };
 
-            const float roughness = sqrtf(2.0f / (alpha + 2.0f));
-            const float k1{ (roughness * roughness) / 2.0f };
-            const auto G1{ [&](float nDotX) {
-                return nDotX / (nDotX * (1.0f - k1) + k1);
-            }};
-            const float D{ ((alpha + 2.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
             const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
 
             const float k{ 1.0f - eta * eta * (1.0f - vDotH * vDotH) };
@@ -326,13 +316,9 @@ public:
                 if (dirDotN * vDotN < 0.0f)
                     return false;
 
-                const float G{ G1(std::abs(vDotN) * G1(std::abs(dirDotN))) };
-                const float numerator{ D * G };
-                const float denominator{ 4.0f * std::abs(vDotN) * std::abs(dirDotN) };
-                const float bsdfVal{ numerator / denominator };
-
-                si.prob = pdfH / (4.0f * std::abs(vDotH));
-                si.mult = (Color{ 1.0f } * bsdfVal) / transmissiveProb;
+                si.prob = pdfH / 4.0f;
+                const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
+                si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
 
                 return true;
             }
@@ -342,26 +328,14 @@ public:
             const float absCosTheta{ std::abs(N.Dot(dir)) };
             if (absCosTheta < 1e-5f) return false;
 
-            const float dirDotH{ dir.Dot(h) };
             const float dirDotN{ dir.Dot(N) };
 
-            const float jacobianDenomRoot{ (etaI * vDotH) + (etaT * dirDotH) };
-            const float jacobian{ (etaT * etaT * std::abs(dirDotH)) / (jacobianDenomRoot * jacobianDenomRoot) };
-
             const float fresnelReflectionAmount{ fresnelRatio + (1.0f - fresnelRatio) * powf(1.0f - vDotH, 5.0f) };
-            const float transFactor{ 1.0f - fresnelReflectionAmount };
+            const float transmissionFactor{ 1.0f - fresnelReflectionAmount };
 
-            const float G{ G1(std::abs(vDotN)) * G1(std::abs(dirDotN)) };
-            const float numerator{ transFactor * D * G * (etaT * etaT) * std::abs(vDotH) * std::abs(dirDotH) };
-            const float denominator{ (jacobianDenomRoot * jacobianDenomRoot) * std::abs(vDotN) * std::abs(dirDotN) };
-            const float bsdfVal{ numerator / denominator };
-
-            si.prob = pdfH * jacobian;
-            //si.prob = pdfH / (4.0f * vDotH);
-            //si.prob = pdfH / 4.0f;
-            //const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
-            //si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
-            si.mult = (transmissiveColor * bsdfVal) / transmissiveProb;
+            si.prob = pdfH / 4.0f;
+            const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
+            si.mult = ((transmissionFactor * transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
 
             return true;
         }
