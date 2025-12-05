@@ -207,6 +207,8 @@ public:
         float specularProb{ specular.GetValue().Gray() };
         float transmissiveProb{ refraction.GetValue().Gray() };
 
+        const float fresnelRatio{ powf((1.0f - ior) / (1.0f + ior), 2.0f) };
+
         //if (transmissiveProb > 0.0f) {
         //    const float R0{ 0.04f };
         //    const float cosTheta{ std::abs(sInfo.N().Dot(sInfo.V())) };
@@ -272,7 +274,12 @@ public:
             si.prob = pdfH / (4.0f * sInfo.V().Dot(h));
             //si.prob = pdfH * 4.0f;
             const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
-            si.mult = ((specularColor * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / specularProb;
+            const float fresnelFactor{ powf(1.0f - sInfo.V().Dot(h), 5.0f) };
+            //const float fresnelReflectionAmount{ fresnelRatio + (1.0f - fresnelRatio) * fresnelFactor };
+            const Color F{ specularColor + (Color{ 1.0f } - specularColor) * fresnelFactor };
+            //si.mult = ((fresnelReflectionAmount * specularColor * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / specularProb;
+            //si.mult = ((F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / (sInfo.N().Dot(dir) * sInfo.N().Dot(sInfo.V())) / specularProb;
+            si.mult = ((F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / specularProb;
 
             return true;
         }
@@ -325,7 +332,6 @@ public:
                 const float bsdfVal{ numerator / denominator };
 
                 si.prob = pdfH / (4.0f * std::abs(vDotH));
-                //si.mult = (transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / transmissiveProb;
                 si.mult = (Color{ 1.0f } * bsdfVal) / transmissiveProb;
 
                 return true;
@@ -342,7 +348,6 @@ public:
             const float jacobianDenomRoot{ (etaI * vDotH) + (etaT * dirDotH) };
             const float jacobian{ (etaT * etaT * std::abs(dirDotH)) / (jacobianDenomRoot * jacobianDenomRoot) };
 
-            const float fresnelRatio{ powf((1.0f - ior) / (1.0f + ior), 2.0f) };
             const float fresnelReflectionAmount{ fresnelRatio + (1.0f - fresnelRatio) * powf(1.0f - vDotH, 5.0f) };
             const float transFactor{ 1.0f - fresnelReflectionAmount };
 
@@ -360,121 +365,7 @@ public:
 
             return true;
         }
-        //if (randomNum < diffuseProb + specularProb + transmissiveProb)
-        //{
-        //    si.lobe = DirSampler::Lobe::TRANSMISSION;
-        //    const Vec3f N{ sInfo.IsFront() ? sInfo.N() : -sInfo.N() };
-        //    si.prob = transmissiveProb;
 
-        //    const float phi{ 2.0f * Pi<float>() * sInfo.RandomFloat() };
-        //    const float r2{ sInfo.RandomFloat() };
-        //    const float alpha{ sqrtf(2.0f / (glossiness.GetValue() + 2.0f)) };
-        //    const float alphaSquared{ alpha * alpha };
-        //    const float cosTheta{ sqrtf((1.0f - r2) / (1.0f + (alphaSquared - 1.0f) * r2)) };
-        //    const float sinTheta{ sqrtf(1.0f - cosTheta * cosTheta) };
-        //    const float x{ cosf(phi) * sinTheta };
-        //    const float y{ sinf(phi) * sinTheta };
-
-        //    Vec3f u, v;
-        //    N.GetOrthonormals(u, v);
-        //    const Vec3f h{ (x * u) + (y * v) + (cosTheta * N) };
-
-        //    const float vDotH{ std::max(0.0f, sInfo.V().Dot(h)) };
-        //    const float nDotV{ std::max(0.00001f, N.Dot(sInfo.V())) };
-        //    const float nDotH{ N.Dot(h) };
-
-        //    const float eta{ sInfo.IsFront() ? 1.0f / ior : ior };
-        //    const float k{ 1.0f - eta * eta * (1.0f - vDotH * vDotH) };
-        //    const Color fresnel{ specularColor + (Color{ 1.0f } - specularColor) * powf(1.0f - vDotH, 5.0f) };
-
-        //    const float denom{ (nDotH * nDotH) * (alphaSquared - 1.0f) + 1.0f };
-        //    const float D{ alphaSquared / (Pi<float>() * denom * denom) };
-
-        //    // TIR
-        //    if (k < 0.0f)
-        //    {
-        //        si.lobe = DirSampler::Lobe::SPECULAR;
-        //        dir = h * 2.0f * std::max(0.0f, vDotH) - sInfo.V();
-
-        //        const float nDotDir{ std::max(0.00001f, N.Dot(dir)) };
-        //        if (nDotDir < 0.0f)
-        //            return false;
-
-        //        const float G1_V{ 2.0f * nDotV / (nDotV + sqrtf(alphaSquared + (1.0f - alphaSquared) * (nDotV * nDotV))) };
-        //        const float G1_L{ 2.0f * nDotDir / (nDotDir + sqrtf(alphaSquared + (1.0f - alphaSquared) * (nDotDir * nDotDir))) };
-        //        const float G{ G1_V * G1_L };
-
-        //        si.prob = specularProb * (D * nDotH) / (4.0f * std::max(0.00001f, vDotH));
-        //        si.mult = (D * fresnel * G) / (4.0f * nDotV * nDotDir);
-        //        //si.mult = refraction.GetValue() * std::abs(dir.Dot(N));
-        //        return true;
-        //    }
-
-        //    dir = (eta * vDotH - sqrtf(k)) * h - eta * sInfo.V();
-        //    const float nDotDir{ std::abs(N.Dot(dir)) };
-
-        //    const float G1_V{ 2.0f * nDotV / (nDotV + sqrtf(alphaSquared + (1.0f - alphaSquared) * (nDotV * nDotV))) };
-        //    const float G1_L{ 2.0f * nDotDir / (nDotDir + sqrtf(alphaSquared + (1.0f - alphaSquared) * (nDotDir * nDotDir))) };
-        //    const float G{ G1_V * G1_L };
-
-        //    const float hDotDir{ h.Dot(dir) };
-
-        //    const float sqrtDenom{ vDotH + eta * hDotDir };
-        //    const float jacobian{ (std::abs(hDotDir) * eta * eta) / (sqrtDenom * sqrtDenom) };
-
-        //    si.prob = transmissiveProb * (D * nDotH) * jacobian;
-        //    si.mult = (transmissiveColor * (1.0f - fresnel) * G * vDotH) / (nDotV * nDotH);
-        //    //std::cout << "Mult: " << si.mult.r << ", " << si.mult.g << ", " << si.mult.b << '\n';
-        //    //std::cout << "Prob: " << si.prob << "\n\n";
-        //    //si.mult = refraction.GetValue() * std::abs(dir.Dot(N));
-
-        //    return true;
-        //}
-        //if (randomNum < diffuseProb + specularProb + transmissiveProb)
-        //{
-        //    const Vec3f N{ sInfo.IsFront() ? sInfo.N() : -sInfo.N() };
-
-        //    si.lobe = DirSampler::Lobe::TRANSMISSION;
-        //    //si.mult = refraction.GetValue();
-        //    si.prob = transmissiveProb;
-        //    
-        //    // Direction
-        //    const float r1{ sInfo.RandomFloat() };
-        //    const float r2{ sInfo.RandomFloat() };
-        //    const float phi{ 2.0f * M_PI * r1 };
-        //    const float cosTheta{ pow(r2, 1.0f / (glossiness.GetValue() + 1.0f)) };
-        //    const float sinTheta{ sqrt(1.0f - cosTheta * cosTheta) };
-
-        //    const float x{ sinTheta * cos(phi) };
-        //    const float y{ sinTheta * sin(phi) };
-        //    const float z{ cosTheta };
-
-        //    Vec3f u, v;
-        //    N.GetOrthonormals(u, v);
-        //    const Vec3f h{ (x * u) + (y * v) + (z * N) };
-
-        //    const Vec3f V{ sInfo.V() };
-        //    const float refractionRatio{ sInfo.IsFront() ? 1.0f / ior : ior };
-        //    const float cosTheta_i{ V.Dot(h) };
-
-        //    const float sinTheta_t_sq{ (refractionRatio * refractionRatio) * (1.0f - cosTheta_i * cosTheta_i) };
-
-        //    if (sinTheta_t_sq > 1.0f)
-        //    {
-        //        si.lobe = DirSampler::Lobe::TRANSMISSION;
-
-        //        dir = h * 2 * sInfo.V().Dot(h) - sInfo.V();
-        //        si.mult = refraction.GetValue() * std::abs(dir.Dot(N));
-        //        return dir.Dot(N) > 0.0f;
-        //    }
-
-        //    const float cosTheta_t{ sqrtf(1.0f - sinTheta_t_sq) };
-
-        //    dir = -V * refractionRatio + h * (refractionRatio * cosTheta_i - cosTheta_t);
-        //    si.mult = refraction.GetValue() * std::abs(dir.Dot(N));
-
-        //    return dir.Dot(N) < 0.0f;
-        //}
         return false;
 
     }
