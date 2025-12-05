@@ -352,70 +352,36 @@ public:
         float specularProb{ specular.GetValue().Gray() };
         float transmissiveProb{ refraction.GetValue().Gray() };
 
-        if (transmissiveProb > 0.0f) {
-            const float R0{ 0.04f };
-            // Note: Use sInfo.V() (View Vector) and sInfo.N() (Normal) for Fresnel
-            const float cosTheta{ std::abs(sInfo.N().Dot(sInfo.V())) };
-            const float F{ R0 + (1.0f - R0) * powf(1.0f - cosTheta, 5.0f) };
-            
-            const float totalSpecTrans{ specularProb + transmissiveProb };
-            specularProb = totalSpecTrans * F;
-            transmissiveProb = totalSpecTrans * (1.0f - F);
+        const float totalProb{ diffuseProb + specularProb + transmissiveProb };
+        if (totalProb > 1.0f)
+        {
+            diffuseProb /= totalProb;
+            specularProb /= totalProb;
+            transmissiveProb /= totalProb;
         }
 
-        const float totalProb{ diffuseProb + specularProb + transmissiveProb };
-        diffuseProb /= totalProb;
-        specularProb /= totalProb;
-        transmissiveProb /= totalProb;
-
-        const float nDotL{ sInfo.N().Dot(dir) };
+        const float nDotDir{ sInfo.N().Dot(dir) };
         const bool isReflection{ nDotL > 0.0f };
 
         si.prob = 0.0f;
         if (diffuseProb > 0.0f && isReflection)
         {
-            const float pdfDiff{ nDotL / M_PI };
-            si.prob += diffuseProb * pdfDiff;
+            const float pdfDiffuse{ nDotDir / Pi<float>() };
+            si.prob += diffuseProb * pdfDiffuse;
         }
-        if (specularProb > 0.0f && isReflection)
+
+        const Vec3f h{ (sInfo.V() + dir).GetNormalized() };
+        const float nDotH{ sInfo.N().Dot(h) };
+        const float vDotH{ sInfo.V().Dot(h) };
+        if (isReflection && nDotH > 0.0f && vDotH > 0.0f && specularProb > 0.0f)
         {
-            const Vec3f h{ (sInfo.V() + dir).GetNormalized() };
-            const float nDotH{ std::max(0.0f, sInfo.N().Dot(h)) };
-            const float vDotH{ std::max(0.001f, sInfo.V().Dot(h)) };
+            const float alpha{ glossiness.GetValue() };
+            const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
+            const float pdfH{ specNorm * powf(nDotH, alpha) };
 
-            if (nDotH > 0.0f)
-            {
-                const float gloss{ glossiness.GetValue() };
-                const float halfPDF{ ((gloss + 1.0f) / (2.0f * M_PI)) * powf(nDotH, gloss) };
-                const float specularPDF{ halfPDF / (4.0f * vDotH) };
-                si.prob += specularProb * specularPDF;
-            }
-        }
-        if (transmissiveProb > 0.0f && !isReflection)
-        {
-            const float eta{ sInfo.IsFront() ? (1.0f / ior) : ior };
-
-            Vec3f h{ -(eta * sInfo.V() + dir).GetNormalized() };
-            if (h.Dot(sInfo.N()) < 0.0f) h = -h;
-
-            const float nDotH{ std::max(0.0f, sInfo.N().Dot(h)) };
-            const float vDotH{ std::abs(sInfo.V().Dot(h)) };
-            const float lDotH{ std::abs(dir.Dot(h)) };
-
-            if (nDotH > 0.0f)
-            {
-                const float gloss{ glossiness.GetValue() };
-
-                const float halfPDF{ ((gloss + 1.0f) / (2.0f * static_cast<float>(M_PI))) * powf(nDotH, gloss) };
-
-                float denom{ (lDotH + eta * vDotH) };
-                denom = denom * denom;
-
-                const float numerator{ lDotH * (eta * eta) };
-                const float transPDF{ halfPDF * (numerator / denom) };
-
-                si.prob += transmissiveProb * transPDF;
-            }
+            //const float pdfSpecular{ pdfHalfVector / (4.0f * vDotH) };
+            const float pdfSpecular{ halfPDF / 4.0f };
+            si.prob += specularProb * specularPDF;
         }
     }
 };
