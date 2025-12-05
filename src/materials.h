@@ -309,9 +309,8 @@ public:
             const Vec3f h{ (x * u) + (y * v) + (cosTheta * N) };
             const float vDotH{ sInfo.V().Dot(h) };
 
-            const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
-            si.prob = pdfH / 4.0f;
-            const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
+            //const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
+            //si.prob = pdfH / 4.0f;
 
             const float k{ 1.0f - eta * eta * (1.0f - vDotH * vDotH) };
             if (k < 0.0f)
@@ -321,7 +320,7 @@ public:
                 if (dirDotN * vDotN < 0.0f)
                     return false;
 
-                //si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
+                const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
                 si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
 
                 return true;
@@ -337,10 +336,8 @@ public:
             if (sInfo.RandomFloat() > transmissionFactor)
                 dir = h * 2.0f * std::max(0.0f, sInfo.V().Dot(h)) - sInfo.V();
 
-            //si.mult = ((transmissionFactor * transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dir.Dot(N)) / transmissiveProb;
-            si.prob = transmissiveProb;
             si.mult = transmissiveColor;
-            //si.mult = (transmissionFactor * transmissiveColor * specNorm * powf(0.0001f, N.Dot(h)), alpha) / transmissiveProb;
+            si.prob = transmissiveProb;
 
             return true;
         }
