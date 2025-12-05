@@ -275,7 +275,7 @@ public:
             const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
             const float fresnelFactor{ powf(1.0f - sInfo.V().Dot(h), 5.0f) };
             const Color F{ reflection.GetValue() + (Color{ 1.0f } - reflection.GetValue()) * fresnelFactor };
-            si.mult = ((F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / specularProb;
+            si.mult = (F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N()) / specularProb;
 
             return true;
         }
@@ -307,6 +307,8 @@ public:
             const float vDotH{ sInfo.V().Dot(h) };
 
             const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
+            si.prob = pdfH / 4.0f;
+            const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
 
             const float k{ 1.0f - eta * eta * (1.0f - vDotH * vDotH) };
             if (k < 0.0f)
@@ -316,26 +318,18 @@ public:
                 if (dirDotN * vDotN < 0.0f)
                     return false;
 
-                si.prob = pdfH / 4.0f;
-                const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
                 si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
 
                 return true;
             }
 
-            const float sqrtK{ sqrtf(k) };
-            dir = (h * (eta * vDotH - sqrtK)) - (sInfo.V() * eta);
+            dir = (h * (eta * vDotH - sqrtf(k))) - (sInfo.V() * eta);
             const float absCosTheta{ std::abs(N.Dot(dir)) };
             if (absCosTheta < 1e-5f) return false;
 
-            const float dirDotN{ dir.Dot(N) };
-
             const float fresnelReflectionAmount{ fresnelRatio + (1.0f - fresnelRatio) * powf(1.0f - vDotH, 5.0f) };
             const float transmissionFactor{ 1.0f - fresnelReflectionAmount };
-
-            si.prob = pdfH / 4.0f;
-            const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
-            si.mult = ((transmissionFactor * transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
+            si.mult = ((transmissionFactor * transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dir.Dot(N)) / transmissiveProb;
 
             return true;
         }
