@@ -303,16 +303,30 @@ public:
             const Vec3f h{ (x * u) + (y * v) + (cosTheta * N) };
             const float vDotH{ sInfo.V().Dot(h) };
 
+            const float roughness = sqrtf(2.0f / (alpha + 2.0f));
+            const float k1{ (roughness * roughness) / 2.0f };
+            const auto G1{ [&](float nDotX) {
+                return nDotX / (nDotX * (1.0f - k1) + k1);
+            }};
+            const float D{ ((alpha + 2.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
+            const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
+
             const float k{ 1.0f - eta * eta * (1.0f - vDotH * vDotH) };
             if (k < 0.0f)
             {
                 dir = h * 2.0f * std::max(0.0f, sInfo.V().Dot(h)) - sInfo.V();
-                if (dir.Dot(N) < 0.0f)
+                const float dirDotN{ dir.Dot(N) };
+                if (dirDotN * vDotN < 0.0f)
                     return false;
 
-                si.prob = ((alpha + 1) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) / (4.0f * sInfo.V().Dot(h));
-                const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
-                si.mult = (transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / transmissiveProb;
+                const float G{ G1(std::abs(vDotN) * G1(std::abs(dirDotN))) };
+                const float numerator{ D * G };
+                const float denominator{ 4.0f * std::abs(vDotN) * std::abs(dirDotN) };
+                const float bsdfVal{ numerator / denominator };
+
+                si.prob = pdfH / (4.0f * std::abs(vDotH));
+                //si.mult = (transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / transmissiveProb;
+                si.mult = (Color{ 1.0f } * bsdfVal) / transmissiveProb;
 
                 return true;
             }
@@ -327,20 +341,12 @@ public:
 
             const float jacobianDenomRoot{ (etaI * vDotH) + (etaT * dirDotH) };
             const float jacobian{ (etaT * etaT * std::abs(dirDotH)) / (jacobianDenomRoot * jacobianDenomRoot) };
-            const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
 
             const float fresnelRatio{ powf((1.0f - ior) / (1.0f + ior), 2.0f) };
             const float fresnelReflectionAmount{ fresnelRatio + (1.0f - fresnelRatio) * powf(1.0f - vDotH, 5.0f) };
             const float transFactor{ 1.0f - fresnelReflectionAmount };
 
-            const float roughness = sqrtf(2.0f / (alpha + 2.0f));
-            const float k1 = (roughness * roughness) / 2.0f;
-            const auto G1{ [&](float nDotX) {
-                return nDotX / (nDotX * (1.0f - k1) + k1);
-            }};
-
             const float G{ G1(std::abs(vDotN)) * G1(std::abs(dirDotN)) };
-            const float D{ ((alpha + 2.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
             const float numerator{ transFactor * D * G * (etaT * etaT) * std::abs(vDotH) * std::abs(dirDotH) };
             const float denominator{ (jacobianDenomRoot * jacobianDenomRoot) * std::abs(vDotN) * std::abs(dirDotN) };
             const float bsdfVal{ numerator / denominator };
