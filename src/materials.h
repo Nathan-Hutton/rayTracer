@@ -245,8 +245,8 @@ public:
 
             const float geometryTerm{ std::max(0.0f, sInfo.N().Dot(dir)) };
 
-            si.mult = (diffuseColor / Pi<float>()) / diffuseProb;
-            si.prob = geometryTerm / Pi<float>();
+            si.mult = (diffuseColor * geometryTerm ) / Pi<float>();
+            si.prob = (geometryTerm / Pi<float>()) * diffuseProb;
 
             return true;
         }
@@ -270,12 +270,15 @@ public:
             if (nDotH < 0.0f)
                 return false;
 
-            const float pdfH{ ((alpha + 1) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
-            si.prob = pdfH / 4.0f;
+            //const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
+            //si.prob = (pdfH / 4.0f) * specularProb;
             const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
             const float fresnelFactor{ powf(1.0f - sInfo.V().Dot(h), 5.0f) };
             const Color F{ reflection.GetValue() + (Color{ 1.0f } - reflection.GetValue()) * fresnelFactor };
-            si.mult = (F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N()) / specularProb;
+            si.prob = specNorm * powf(nDotH, alpha) * specularProb;
+            //si.mult = (F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N()) / specularProb;
+            //si.mult = F * specNorm * powf(nDotH, alpha);
+            si.mult = specularColor * specNorm * powf(nDotH, alpha);
 
             return true;
         }
@@ -318,6 +321,7 @@ public:
                 if (dirDotN * vDotN < 0.0f)
                     return false;
 
+                //si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
                 si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
 
                 return true;
@@ -329,7 +333,14 @@ public:
 
             const float fresnelReflectionAmount{ fresnelRatio + (1.0f - fresnelRatio) * powf(1.0f - vDotH, 5.0f) };
             const float transmissionFactor{ 1.0f - fresnelReflectionAmount };
-            si.mult = ((transmissionFactor * transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dir.Dot(N)) / transmissiveProb;
+
+            if (sInfo.RandomFloat() > transmissionFactor)
+                dir = h * 2.0f * std::max(0.0f, sInfo.V().Dot(h)) - sInfo.V();
+
+            //si.mult = ((transmissionFactor * transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dir.Dot(N)) / transmissiveProb;
+            si.prob = transmissiveProb;
+            si.mult = transmissiveColor;
+            //si.mult = (transmissionFactor * transmissiveColor * specNorm * powf(0.0001f, N.Dot(h)), alpha) / transmissiveProb;
 
             return true;
         }
