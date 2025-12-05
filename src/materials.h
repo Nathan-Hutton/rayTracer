@@ -277,21 +277,46 @@ public:
         if (randomNum < diffuseProb + specularProb + transmissiveProb)
         {
             si.lobe = DirSampler::Lobe::TRANSMISSION;
-            const Vec3f N{ sInfo.IsFront() ? sInfo.N() : -sInfo.N() };
-            const float vDotN{ sInfo.V().Dot(N) };
-            const float eta{ vDotN > 0.0f ? 1.0f / ior : ior };
 
-            const float k{ 1.0f - eta * eta * (1.0f - vDotN * vDotN) };
+            Vec3f N{ sInfo.N() };
+            float etaI{ 1.0f };
+            float etaT{ ior };
+            const float vDotN{ sInfo.V().Dot(N) };
+            if (vDotN < 0.0f)
+            {
+                N = -N;
+                std::swap(etaI, etaT);
+            }
+
+            const float eta{ etaI / etaT };
+
+            const float alpha{ glossiness.GetValue() };
+            const float phi{ 2.0f * Pi<float>() * sInfo.RandomFloat() };
+            const float cosTheta{ powf(1.0f - sInfo.RandomFloat(), 1.0f / (alpha + 1.0f)) };
+            const float sinTheta{ sqrtf(1.0f - cosTheta * cosTheta) };
+            const float x{ sinTheta * cosf(phi) };
+            const float y{ sinTheta * sinf(phi) };
+            Vec3f u, v;
+            N.GetOrthonormals(u, v);
+            const Vec3f h{ (x * u) + (y * v) + (cosTheta * N) };
+            const float vDotH{ sInfo.V().Dot(h) };
+
+            const float k{ 1.0f - eta * eta * (1.0f - vDotH * vDotH) };
             if (k < 0.0f) // TODO: Add total internal reflections here
                 return false;
 
             const float sqrtK{ sqrtf(k) };
-            dir = (N * (eta * vDotN - sqrtK)) - (sInfo.V() * eta);
-            si.prob = 1.0f;
-
-            const float absCosTheta{ std::abs(sInfo.N().Dot(dir)) };
+            dir = (h * (eta * vDotH - sqrtK)) - (sInfo.V() * eta);
+            const float absCosTheta{ std::abs(N.Dot(dir)) };
             if (absCosTheta < 1e-5f) return false;
 
+            const float dirDotH{ dir.Dot(h) };
+
+            const float jacobianDenomRoot{ (etaI * vDotH) + (etaT * dirDotH) };
+            const float jacobian{ (etaT * etaT * std::abs(dirDotH)) / (jacobianDenomRoot * jacobianDenomRoot) };
+            const float pdfH{ ((alpha + 1) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
+
+            si.prob = pdfH / jacobian;
             si.mult = (transmissiveColor / transmissiveProb) / absCosTheta;
 
             return true;
