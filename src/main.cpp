@@ -260,7 +260,7 @@ Color tracePath(Ray ray)
 void threadRenderTiles()
 {
     constexpr size_t minNumSamples{ 128 };
-    constexpr size_t maxNumSamples{ 256 };
+    constexpr size_t maxNumSamples{ 128 };
 
     while (true)
     {
