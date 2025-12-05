@@ -274,6 +274,28 @@ public:
 
             return true;
         }
+        if (randomNum < diffuseProb + specularProb + transmissiveProb)
+        {
+            si.lobe = DirSampler::Lobe::TRANSMISSION;
+            const Vec3f N{ sInfo.IsFront() ? sInfo.N() : -sInfo.N() };
+            const float vDotN{ sInfo.V().Dot(N) };
+            const float eta{ vDotN > 0.0f ? 1.0f / ior : ior };
+
+            const float k{ 1.0f - eta * eta * (1.0f - vDotN * vDotN) };
+            if (k < 0.0f) // TODO: Add total internal reflections here
+                return false;
+
+            const float sqrtK{ sqrtf(k) };
+            dir = (N * (eta * vDotN - sqrtK)) - (sInfo.V() * eta);
+            si.prob = 1.0f;
+
+            const float absCosTheta{ std::abs(sInfo.N().Dot(dir)) };
+            if (absCosTheta < 1e-5f) return false;
+
+            si.mult = (transmissiveColor / transmissiveProb) / absCosTheta;
+
+            return true;
+        }
         //if (randomNum < diffuseProb + specularProb + transmissiveProb)
         //{
         //    si.lobe = DirSampler::Lobe::TRANSMISSION;
