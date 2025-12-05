@@ -270,6 +270,7 @@ public:
 
             const float pdfH{ ((alpha + 1) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
             si.prob = pdfH / (4.0f * sInfo.V().Dot(h));
+            //si.prob = pdfH * 4.0f;
             const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
             si.mult = ((specularColor * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N())) / specularProb;
 
@@ -305,14 +306,12 @@ public:
             const float k{ 1.0f - eta * eta * (1.0f - vDotH * vDotH) };
             if (k < 0.0f)
             {
-                return false;
                 dir = h * 2.0f * std::max(0.0f, sInfo.V().Dot(h)) - sInfo.V();
                 if (dir.Dot(N) < 0.0f)
                     return false;
 
-                //si.prob = ((alpha + 1) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) / (4.0f * sInfo.V().Dot(h));
-                si.prob = 1.0f;
-                const float specNorm{ (alpha + 2) / (2.0f * Pi<float>()) };
+                si.prob = ((alpha + 1) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) / (4.0f * sInfo.V().Dot(h));
+                const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
                 si.mult = (transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / transmissiveProb;
 
                 return true;
@@ -347,6 +346,10 @@ public:
             const float bsdfVal{ numerator / denominator };
 
             si.prob = pdfH * jacobian;
+            //si.prob = pdfH / (4.0f * vDotH);
+            //si.prob = pdfH / 4.0f;
+            //const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
+            //si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
             si.mult = (transmissiveColor * bsdfVal) / transmissiveProb;
 
             return true;
