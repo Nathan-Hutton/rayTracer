@@ -243,8 +243,9 @@ public:
 	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override 
     {
         Vec3f dirMatToCenter{ position - sInfo.P() };
-        const float distFromCenterToMat{ dirMatToCenter.Length() };
-        if (distFromCenterToMat < 1e-5)
+        const float dist{ dirMatToCenter.Length() };
+        const float distSquared{ dirMatToCenter.LengthSquared() };
+        if (dist < 1e-5)
         {
             si.prob = 0.0f;
             return;
@@ -252,17 +253,36 @@ public:
 
         dirMatToCenter.Normalize();
 
-        const float sinThetaMax{ size / distFromCenterToMat };
-        const float cosThetaMax{ sqrtf(1.0f - (sinThetaMax * sinThetaMax)) };
+        //const float sinThetaMax{ size / dist };
+        const float sinThetaMaxSq{ (size * size) / distSquared };
+        //const float cosThetaMax{ sqrtf(1.0f - (sinThetaMax * sinThetaMax)) };
 
         const float cosThetaOfRay{ dir.Dot(dirMatToCenter) };
-
-        if (cosThetaOfRay > cosThetaMax)
+        if (cosThetaOfRay <= 0.0f)
         {
-            const float oneMinusCosThetaMax = (sinThetaMax * sinThetaMax) / (1.0f + cosThetaMax);
+            si.prob = 0.0f;
+            return;
+        }
+
+        const float cosThetaRaySq = cosThetaOfRay * cosThetaOfRay;
+        const float cosThetaMaxSq = 1.0f - sinThetaMaxSq;
+
+        if (cosThetaRaySq >= cosThetaMaxSq)
+        {
+            const float cosThetaMax = sqrtf(std::max(0.0f, cosThetaMaxSq));
+
+            const float oneMinusCosThetaMax = sinThetaMaxSq / (1.0f + cosThetaMax);
+
             si.prob = 1.0f / (2.0f * Pi<float>() * oneMinusCosThetaMax);
             return;
         }
+
+        //if (cosThetaOfRay > cosThetaMax)
+        //{
+        //    const float oneMinusCosThetaMax = (sinThetaMax * sinThetaMax) / (1.0f + cosThetaMax);
+        //    si.prob = 1.0f / (2.0f * Pi<float>() * oneMinusCosThetaMax);
+        //    return;
+        //}
 
         si.prob = 0.0f;
     }

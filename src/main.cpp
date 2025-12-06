@@ -163,6 +163,7 @@ Color tracePath(Ray ray)
     Color result{ 0.0f };
     constexpr size_t maxBounces{ 50 };
     const Light* light{ renderer.GetScene().lights[0] };
+    DirSampler::Info indirectLightingInfo;
 
     float lastBounceProb{ 1.0f };
 
@@ -188,14 +189,22 @@ Color tracePath(Ray ray)
             }
             else
             {
-                DirSampler::Info lightInfo;
-                light->GetSampleInfo(sInfo, ray.dir, lightInfo);
-
                 float weight{ 1.0f };
-                if (lightInfo.prob > 0.0f)
-                    weight = (lastBounceProb * lastBounceProb) / (lastBounceProb * lastBounceProb + lightInfo.prob * lightInfo.prob);
+                if (indirectLightingInfo.lobe == DirSampler::Lobe::DIFFUSE)
+                {
+                    HitInfo dummyHitInfo;
+                    dummyHitInfo.p = ray.p;
+                    SamplerInfo dummySamplerInfo{ tileThreads::rng };
+                    dummySamplerInfo.SetHit(ray, dummyHitInfo);
 
-                //result += light->Radiance(sInfo) * throughput * weight;
+                    DirSampler::Info lightInfo;
+                    light->GetSampleInfo(dummySamplerInfo, ray.dir, lightInfo);
+
+                    if (lightInfo.prob > 0.0f)
+                        weight = (lastBounceProb * lastBounceProb) / (lastBounceProb * lastBounceProb + lightInfo.prob * lightInfo.prob);
+                }
+
+                result += light->Radiance(sInfo) * throughput * weight;
             }
             return result;
         }
@@ -229,7 +238,7 @@ Color tracePath(Ray ray)
                     const float blinnTerm{ std::max(0.0f, normal.Dot(h)) };
                     
                     const float gloss{ material->Glossiness().GetValue() };
-                    if (blinnTerm > 0.0f && gloss < 100.0f)
+                    if (blinnTerm > 0.0f && materialInfo.lobe == DirSampler::Lobe::DIFFUSE)
                     {
                         const Color specular{ material->Specular().GetValue() };
                         const float specNorm{ (gloss + 2) / (2.0f * Pi<float>()) };
@@ -243,7 +252,6 @@ Color tracePath(Ray ray)
 
         // Indirect bounce
         Vec3f bounceDir;
-        DirSampler::Info indirectLightingInfo;
         if (!material->GenerateSample(sInfo, bounceDir, indirectLightingInfo))
             break;
 
