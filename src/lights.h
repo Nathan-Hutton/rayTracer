@@ -205,56 +205,6 @@ public:
 	Box  GetBoundBox() const override { return Box( position-size, position+size ); }
 	void ViewportDisplay( Material const *mtl ) const override;	// used for OpenGL display
 
-	//bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override 
-    //{
-    //    //const float r1{ sInfo.RandomFloat() };
-    //    //const float r2{ sInfo.RandomFloat() };
-    //    //const float theta{ acosf(sqrtf(r1)) * r2 };
-    //    //const float phi{ 2.0f * static_cast<float>(M_PI) * r2 };
-    //    //const Vec3f localSample{ sinf(theta) * cosf(phi), cosf(theta), sinf(theta) * sinf(phi) };
-    //    
-    //    const float z{ sInfo.RandomFloat() };
-    //    const float sinTheta{ sqrtf(1.0f - z * z) };
-    //    const float phi{ 2.0f * M_PI * sInfo.RandomFloat() };
-    //    const float x{ sinTheta * cos(phi) };
-    //    const float y{ sinTheta * sin(phi) };
-
-    //    const Vec3f dirToMatPoint{ (sInfo.P() - position).GetNormalized() };
-    //    Vec3f u, v;
-    //    dirToMatPoint.GetOrthonormals(u, v);
-    //    const Vec3f sample{ position + (((x * u) + (y * v) + (z * dirToMatPoint)) * size) };
-
-    //    //const float theta{ 2.0f * M_PI * r1 };
-    //    //const float posZ{ size * (1.0f - 2.0f * r2) };
-    //    //const float rProj{ sqrtf(size * size - posZ * posZ) };
-    //    //const float posX{ rProj * cos(theta) };
-    //    //const float posY{ rProj * sin(theta) };
-    //    //const Vec3f pos{ Vec3f{ posX, posY, posZ } + position };
-
-    //    //dir = pos - sInfo.P();
-    //    dir = sample - sInfo.P();
-    //    si.dist = dir.Length();
-    //    dir.Normalize();
-
-    //    si.norm = (sample - position).GetNormalized();
-
-    //    //const Vec3f norm{ (sample - position).GetNormalized() };
-    //    //const float cosThetaLight{ norm.Dot(-dir) };
-    //    //if (cosThetaLight <= 0.0f)
-    //        //return false;
-
-    //    //intensity / (Pi<float>()*size*size)
-    //    si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
-    //    //si.mult = intensity * (static_cast<float>(M_PI) / (si.dist * si.dist));
-    //    //si.mult = intensity / (si.dist * si.dist);
-    //    //si.mult = Radiance(sInfo) * (Pi<float>() / (si.dist * si.dist));
-    //    //si.mult = Radiance(sInfo);
-    //    //si.mult = intensity / (si.dist * si.dist);
-    //    //si.mult = Radiance(sInfo);
-    //    si.prob = 1.0f / (2.0f * Pi<float>() * size * size);
-
-    //    return true;
-    //}
 	bool GenerateSample( SamplerInfo const &sInfo, Vec3f       &dir, Info &si ) const override 
     {
         Vec3f dirMatToCenter{ position - sInfo.P() };

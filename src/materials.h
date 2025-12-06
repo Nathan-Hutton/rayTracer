@@ -270,12 +270,12 @@ public:
             if (nDotH < 0.0f)
                 return false;
 
-            //const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
-            //si.prob = (pdfH / 4.0f) * specularProb;
+            const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
+            //const float fresnelFactor{ powf(1.0f - sInfo.V().Dot(h), 5.0f) };
+            //const Color F{ reflection.GetValue() + (Color{ 1.0f } - reflection.GetValue()) * fresnelFactor };
             const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
-            const float fresnelFactor{ powf(1.0f - sInfo.V().Dot(h), 5.0f) };
-            const Color F{ reflection.GetValue() + (Color{ 1.0f } - reflection.GetValue()) * fresnelFactor };
             si.prob = specNorm * powf(nDotH, alpha) * specularProb;
+            //si.prob = pdfH / (4.0f * sInfo.V().Dot(h));
             //si.mult = (F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N()) / specularProb;
             //si.mult = F * specNorm * powf(nDotH, alpha);
             si.mult = specularColor * specNorm * powf(nDotH, alpha);
@@ -361,7 +361,7 @@ public:
         }
 
         const float nDotDir{ sInfo.N().Dot(dir) };
-        const bool isReflection{ nDotL > 0.0f };
+        const bool isReflection{ nDotDir > 0.0f };
 
         si.prob = 0.0f;
         if (diffuseProb > 0.0f && isReflection)
@@ -379,9 +379,9 @@ public:
             const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
             const float pdfH{ specNorm * powf(nDotH, alpha) };
 
-            //const float pdfSpecular{ pdfHalfVector / (4.0f * vDotH) };
-            const float pdfSpecular{ halfPDF / 4.0f };
-            si.prob += specularProb * specularPDF;
+            const float pdfSpecular{ pdfH / (4.0f * vDotH) };
+            //const float pdfSpecular{ pdfH / 4.0f };
+            si.prob += specularProb * pdfSpecular;
         }
     }
 };

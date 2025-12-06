@@ -217,6 +217,15 @@ Color tracePath(Ray ray)
         //        const float cosThetaSurface{ std::max(0.0f, normal.Dot(nextEventShadowDir)) };
         //        if (cosThetaSurface > 0.0f && nextEventInfo.prob > 0.0f)
         //        {
+        //            // Calculate MIS weight
+        //            DirSampler::Info materialInfo;
+        //            material->GetSampleInfo(sInfo, nextEventShadowDir, materialInfo);
+        //            float weight{ 1.0f };
+        //            //if (materialInfo.prob > 0.0f)
+        //            //    weight = (nextEventInfo.prob * nextEventInfo.prob) / (nextEventInfo.prob * nextEventInfo.prob + materialInfo.prob * materialInfo.prob);
+        //            //std::cout << weight << '\n';
+
+        //            // Regular shading
         //            const Color diffuse{ material->Diffuse().GetValue() };
         //            Color brdf{ diffuse / Pi<float>() };
 
@@ -231,7 +240,7 @@ Color tracePath(Ray ray)
         //                brdf += specular * specNorm * pow(blinnTerm, gloss);
         //            }
 
-        //            result += (brdf * cosThetaSurface * nextEventInfo.mult) / nextEventInfo.prob * throughput;
+        //            result += (brdf * cosThetaSurface * nextEventInfo.mult) * weight / nextEventInfo.prob * throughput;
         //        }
         //    }
         //}
@@ -242,7 +251,7 @@ Color tracePath(Ray ray)
         if (!material->GenerateSample(sInfo, bounceDir, indirectLightingInfo))
             break;
 
-        //lastBounceProb = indirectLightingInfo.prob;
+        lastBounceProb = indirectLightingInfo.prob;
 
         ray.dir = bounceDir;
         const float sign{ (normal.Dot(bounceDir) > 0.0f) ? 1.0f : -1.0f };
@@ -257,8 +266,8 @@ Color tracePath(Ray ray)
 // Adaptive
 void threadRenderTiles()
 {
-    constexpr size_t minNumSamples{ 1024 };
-    constexpr size_t maxNumSamples{ 1024 };
+    constexpr size_t minNumSamples{ 128 };
+    constexpr size_t maxNumSamples{ 128 };
 
     while (true)
     {
