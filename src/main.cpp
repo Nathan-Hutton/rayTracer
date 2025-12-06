@@ -221,9 +221,8 @@ Color tracePath(Ray ray)
                     DirSampler::Info materialInfo;
                     material->GetSampleInfo(sInfo, nextEventShadowDir, materialInfo);
                     float weight{ 1.0f };
-                    //if (materialInfo.prob > 0.0f)
-                    //    weight = (nextEventInfo.prob * nextEventInfo.prob) / (nextEventInfo.prob * nextEventInfo.prob + materialInfo.prob * materialInfo.prob);
-                    //std::cout << weight << '\n';
+                    if (materialInfo.prob > 0.0f)
+                        weight = (nextEventInfo.prob * nextEventInfo.prob) / (nextEventInfo.prob * nextEventInfo.prob + materialInfo.prob * materialInfo.prob);
 
                     // Regular shading
                     const Color diffuse{ material->Diffuse().GetValue() };

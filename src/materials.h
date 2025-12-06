@@ -312,7 +312,6 @@ public:
             const Vec3f h{ (x * u) + (y * v) + (cosTheta * N) };
             const float vDotH{ sInfo.V().Dot(h) };
 
-            //const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
             //si.prob = pdfH / 4.0f;
 
             const float k{ 1.0f - eta * eta * (1.0f - vDotH * vDotH) };
@@ -323,8 +322,11 @@ public:
                 if (dirDotN * vDotN < 0.0f)
                     return false;
 
+                const float pdfH{ ((alpha + 1.0f) / (8.0f * Pi<float>())) * powf(cosTheta, alpha) };
+                si.prob = (pdfH / (4.0f * vDotH)) * transmissiveProb;
+
                 const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
-                si.mult = ((transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / dirDotN) / transmissiveProb;
+                si.mult = (transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / (4.0f * vDotH);
 
                 return true;
             }
@@ -337,7 +339,17 @@ public:
             const float transmissionFactor{ 1.0f - fresnelReflectionAmount };
 
             if (sInfo.RandomFloat() > transmissionFactor)
+            {
                 dir = h * 2.0f * std::max(0.0f, sInfo.V().Dot(h)) - sInfo.V();
+
+                const float pdfH{ ((alpha + 1.0f) / (8.0f * Pi<float>())) * powf(cosTheta, alpha) };
+                si.prob = (pdfH / (4.0f * vDotH)) * transmissiveProb * fresnelReflectionAmount;
+
+                const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
+                si.mult = (transmissiveColor * specNorm * powf(N.Dot(h), alpha)) / (4.0f * vDotH) * fresnelReflectionAmount;
+
+                return true;
+            }
 
             si.mult = transmissiveColor;
             si.prob = transmissiveProb;
