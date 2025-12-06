@@ -270,15 +270,18 @@ public:
             if (nDotH < 0.0f)
                 return false;
 
-            const float pdfH{ ((alpha + 1.0f) / (2.0f * Pi<float>())) * powf(cosTheta, alpha) };
+            const float pdfH{ ((alpha + 1.0f) / (8.0f * Pi<float>())) * powf(cosTheta, alpha) };
             //const float fresnelFactor{ powf(1.0f - sInfo.V().Dot(h), 5.0f) };
             //const Color F{ reflection.GetValue() + (Color{ 1.0f } - reflection.GetValue()) * fresnelFactor };
-            const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
-            si.prob = specNorm * powf(nDotH, alpha) * specularProb;
-            //si.prob = pdfH / (4.0f * sInfo.V().Dot(h));
+            si.prob = (pdfH / (4.0f * sInfo.V().Dot(h))) * specularProb;
             //si.mult = (F * specNorm * powf(nDotH, alpha)) / dir.Dot(sInfo.N()) / specularProb;
             //si.mult = F * specNorm * powf(nDotH, alpha);
-            si.mult = specularColor * specNorm * powf(nDotH, alpha);
+            //si.mult = specularColor * specNorm * powf(nDotH, alpha);
+
+            const float specNorm{ (alpha + 2.0f) / (8.0f * Pi<float>()) };
+            //si.prob = specNorm * powf(nDotH, alpha) * specularProb;
+            //si.mult = specularColor * specNorm * powf(nDotH, alpha);
+            si.mult = (specularColor * specNorm * powf(nDotH, alpha)) / (4.0f * sInfo.V().Dot(h));
 
             return true;
         }
