@@ -188,17 +188,14 @@ Color tracePath(Ray ray)
             }
             else
             {
-                //const float distSquared{ hInfo.z * hInfo.z };
-                //const float cosThetaLight{ std::max(1e-4f, hInfo.N.Dot(-ray.dir)) };
-                //const float lightAreaPDF{ 1.0f / (4.0f * M_PI * light->GetSize() * light->GetSize()) };
-                //const float lightSolidPDF{ lightAreaPDF * (distSquared / cosThetaLight) };
+                DirSampler::Info lightInfo;
+                light->GetSampleInfo(sInfo, ray.dir, lightInfo);
 
-                //const float lastBouncePDFSquared{ lastBounceProb * lastBounceProb };
-                //const float lightSolidPDFSquared{ lightSolidPDF * lightSolidPDF };
-                //const float weight{ lastBouncePDFSquared / (lastBouncePDFSquared + lightSolidPDFSquared) };
+                float weight{ 1.0f };
+                if (lightInfo.prob > 0.0f)
+                    weight = (lastBounceProb * lastBounceProb) / (lastBounceProb * lastBounceProb + lightInfo.prob * lightInfo.prob);
 
-                //result += light->Intensity() * throughput * weight;
-                //result += light->Radiance(sInfo) * throughput;
+                //result += light->Radiance(sInfo) * throughput * weight;
             }
             return result;
         }
@@ -231,10 +228,10 @@ Color tracePath(Ray ray)
                     const Vec3f h{ (nextEventShadowDir - ray.dir).GetNormalized() };
                     const float blinnTerm{ std::max(0.0f, normal.Dot(h)) };
                     
-                    if (blinnTerm > 0.0f)
+                    const float gloss{ material->Glossiness().GetValue() };
+                    if (blinnTerm > 0.0f && gloss < 100.0f)
                     {
                         const Color specular{ material->Specular().GetValue() };
-                        const float gloss{ material->Glossiness().GetValue() };
                         const float specNorm{ (gloss + 2) / (2.0f * Pi<float>()) };
                         brdf += specular * specNorm * pow(blinnTerm, gloss);
                     }

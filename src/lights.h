@@ -240,7 +240,32 @@ public:
 
         return true;
     }
-	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override {}
+	void GetSampleInfo ( SamplerInfo const &sInfo, Vec3f const &dir, Info &si ) const override 
+    {
+        Vec3f dirMatToCenter{ position - sInfo.P() };
+        const float distFromCenterToMat{ dirMatToCenter.Length() };
+        if (distFromCenterToMat < 1e-5)
+        {
+            si.prob = 0.0f;
+            return;
+        }
+
+        dirMatToCenter.Normalize();
+
+        const float sinThetaMax{ size / distFromCenterToMat };
+        const float cosThetaMax{ sqrtf(1.0f - (sinThetaMax * sinThetaMax)) };
+
+        const float cosThetaOfRay{ dir.Dot(dirMatToCenter) };
+
+        if (cosThetaOfRay > cosThetaMax)
+        {
+            const float oneMinusCosThetaMax = (sinThetaMax * sinThetaMax) / (1.0f + cosThetaMax);
+            si.prob = 1.0f / (2.0f * Pi<float>() * oneMinusCosThetaMax);
+            return;
+        }
+
+        si.prob = 0.0f;
+    }
 
 protected:
 	Color intensity   = Color(0,0,0);
